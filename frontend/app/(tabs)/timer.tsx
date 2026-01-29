@@ -214,7 +214,6 @@ export default function TimerScreen() {
 
   const handlePhaseComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    playBeep();
 
     if (timerState === 'work') {
       setTimerState('rest');
