@@ -30,12 +30,6 @@
         "android.permission.POST_NOTIFICATIONS"
       ]
     },
-    "notification": {
-      "icon": "./assets/images/notification-icon.png",
-      "color": "#00D9FF",
-      "androidMode": "default",
-      "androidCollapsedTitle": "Workout Timer"
-    },
     "web": {
       "bundler": "metro",
       "output": "static",
