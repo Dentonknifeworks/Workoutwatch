@@ -125,14 +125,18 @@ export default function TimerScreen() {
   };
 
   const sendNotification = async (title: string, body: string) => {
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title,
-        body,
-        sound: true,
-      },
-      trigger: null,
-    });
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: true,
+        },
+        trigger: null,
+      });
+    } catch (error) {
+      console.log('Notifications not supported on this platform');
+    }
   };
 
   const startWorkout = async () => {
