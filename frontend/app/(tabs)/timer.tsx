@@ -177,25 +177,30 @@ export default function TimerScreen() {
     lastSpokenSecond.current = -1;
   };
 
-  const completeWorkout = async () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+  const skipToRest = () => {
+    if (timerState === 'work') {
+      // Skip current work interval and go to rest
+      setTimerState('rest');
+      setTimeLeft(settings.restTime);
+      speak('Rest time!');
+      sendNotification('Rest Time', `Take a ${settings.restTime} second break`);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      lastSpokenSecond.current = -1;
+    } else if (timerState === 'rest') {
+      // If in rest, skip to next round
+      if (currentRound >= settings.rounds) {
+        // Was last round, complete workout
+        stopWorkout();
+      } else {
+        setCurrentRound(currentRound + 1);
+        setTimerState('work');
+        setTimeLeft(settings.workTime);
+        speak(`Round ${currentRound + 1}. Go!`);
+        sendNotification(`Round ${currentRound + 1}`, 'Time to work!');
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+        lastSpokenSecond.current = -1;
+      }
     }
-    setTimerState('idle');
-    const completedRounds = currentRound;
-    setCurrentRound(1);
-    setTimeLeft(settings.workTime);
-    speak('Great work! Workout complete!');
-    try {
-      await deactivateKeepAwake();
-    } catch (error) {
-      console.log('Keep awake deactivate not needed on this platform');
-    }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    lastSpokenSecond.current = -1;
-
-    // Save workout to history
-    saveWorkoutHistory();
   };
 
   const saveWorkoutHistory = async () => {
