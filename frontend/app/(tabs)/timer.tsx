@@ -227,7 +227,6 @@ export default function TimerScreen() {
         // Workout complete
         setTimerState('idle');
         speak('Workout complete! Great job!');
-        sendNotification('Workout Complete', `You finished ${settings.rounds} rounds!`);
         try {
           deactivateKeepAwake();
         } catch (error) {
