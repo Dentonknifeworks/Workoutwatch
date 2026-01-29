@@ -221,7 +221,6 @@ export default function TimerScreen() {
       setTimerState('rest');
       setTimeLeft(settings.restTime);
       speak('Rest!');
-      sendNotification('Rest Time', `Take a ${settings.restTime} second break`);
       lastSpokenSecond.current = -1;
     } else if (timerState === 'rest') {
       if (currentRound >= settings.rounds) {
