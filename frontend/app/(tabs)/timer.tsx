@@ -240,7 +240,6 @@ export default function TimerScreen() {
         setTimerState('work');
         setTimeLeft(settings.workTime);
         speak(`Round ${currentRound + 1}. Go!`);
-        sendNotification(`Round ${currentRound + 1}`, 'Time to work!');
         lastSpokenSecond.current = -1;
       }
     }
