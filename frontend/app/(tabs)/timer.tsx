@@ -48,13 +48,8 @@ export default function TimerScreen() {
   const lastSpokenSecond = useRef<number>(-1);
 
   useEffect(() => {
-    setupAudio();
-    requestPermissions();
     loadSettings();
     return () => {
-      if (sound) {
-        sound.unloadAsync();
-      }
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
