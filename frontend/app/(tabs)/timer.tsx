@@ -251,7 +251,11 @@ export default function TimerScreen() {
         setTimerState('idle');
         speak('Workout complete! Great job!');
         sendNotification('Workout Complete', `You finished ${settings.rounds} rounds!`);
-        deactivateKeepAwake();
+        try {
+          deactivateKeepAwake();
+        } catch (error) {
+          console.log('Keep awake deactivate not needed on this platform');
+        }
         saveWorkoutHistory();
         lastSpokenSecond.current = -1;
       } else {
