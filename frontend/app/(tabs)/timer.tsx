@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
-import { Audio } from 'expo-av';
+import { Audio } from 'expo-audio';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import * as Notifications from 'expo-notifications';
