@@ -97,9 +97,10 @@ export default function TimerScreen() {
 
   const pauseWorkout = () => {
     if (timerState === 'paused') {
-      setTimerState(timerState === 'work' ? 'work' : 'rest');
+      setTimerState(previousState);
       speak('Resuming');
     } else {
+      setPreviousState(timerState as 'work' | 'rest');
       setTimerState('paused');
       speak('Paused');
     }
