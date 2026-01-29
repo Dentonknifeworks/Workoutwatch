@@ -57,23 +57,7 @@ export default function TimerScreen() {
     };
   }, []);
 
-  const setupAudio = async () => {
-    try {
-      await Audio.setAudioModeAsync({
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: true,
-      });
-    } catch (error) {
-      console.error('Error setting up audio:', error);
-    }
-  };
-
-  const requestPermissions = async () => {
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Notification permissions not granted');
-    }
-  };
+  // Audio setup and notifications removed per user request
 
   const loadSettings = async () => {
     try {
