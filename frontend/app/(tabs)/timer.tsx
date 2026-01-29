@@ -24,6 +24,7 @@ interface WorkoutSettings {
 
 export default function TimerScreen() {
   const [timerState, setTimerState] = useState<TimerState>('idle');
+  const [previousState, setPreviousState] = useState<'work' | 'rest'>('work');
   const [currentRound, setCurrentRound] = useState(1);
   const [timeLeft, setTimeLeft] = useState(30);
   const [settings, setSettings] = useState<WorkoutSettings>({
