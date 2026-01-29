@@ -136,7 +136,11 @@ export default function TimerScreen() {
   };
 
   const startWorkout = async () => {
-    await activateKeepAwakeAsync();
+    try {
+      await activateKeepAwakeAsync();
+    } catch (error) {
+      console.log('Keep awake not supported on this platform:', error);
+    }
     setTimerState('work');
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
