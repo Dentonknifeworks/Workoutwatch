@@ -361,10 +361,16 @@ export default function TimerScreen() {
               </View>
               <TouchableOpacity 
                 style={styles.completeButton} 
-                onPress={completeWorkout}
+                onPress={skipToRest}
               >
-                <Ionicons name="checkmark-circle" size={24} color="#fff" />
-                <Text style={styles.completeButtonText}>Complete Workout</Text>
+                <Ionicons 
+                  name={timerState === 'work' ? 'play-skip-forward' : 'play-skip-forward'} 
+                  size={24} 
+                  color="#fff" 
+                />
+                <Text style={styles.completeButtonText}>
+                  {timerState === 'work' ? 'Skip to Rest' : 'Next Round'}
+                </Text>
               </TouchableOpacity>
             </>
           )}
