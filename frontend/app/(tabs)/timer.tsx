@@ -192,7 +192,6 @@ export default function TimerScreen() {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
           } else if (newTime <= 3 && newTime > 0 && lastSpokenSecond.current !== newTime) {
             speak(newTime.toString());
-            playBeep();
             lastSpokenSecond.current = newTime;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           }
