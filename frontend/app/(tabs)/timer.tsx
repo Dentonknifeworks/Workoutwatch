@@ -168,7 +168,11 @@ export default function TimerScreen() {
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
     speak('Workout stopped');
-    await deactivateKeepAwake();
+    try {
+      await deactivateKeepAwake();
+    } catch (error) {
+      console.log('Keep awake deactivate not needed on this platform');
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     lastSpokenSecond.current = -1;
 
