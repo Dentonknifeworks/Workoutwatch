@@ -100,18 +100,7 @@ export default function TimerScreen() {
     }
   };
 
-  const playBeep = async () => {
-    try {
-      const { sound: beepSound } = await Audio.Sound.createAsync(
-        { uri: 'https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3' },
-        { shouldPlay: true, volume: 0.5 }
-      );
-      await beepSound.playAsync();
-      setTimeout(() => beepSound.unloadAsync(), 1000);
-    } catch (error) {
-      console.error('Error playing beep:', error);
-    }
-  };
+  // Beep sound removed per user request
 
   const speak = (text: string) => {
     if (Speech.isSpeakingAsync()) {
