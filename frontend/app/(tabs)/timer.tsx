@@ -338,21 +338,30 @@ export default function TimerScreen() {
               <Text style={styles.buttonText}>Start</Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.activeControls}>
-              <TouchableOpacity
-                style={styles.pauseButton}
-                onPress={pauseWorkout}
+            <>
+              <View style={styles.activeControls}>
+                <TouchableOpacity
+                  style={styles.pauseButton}
+                  onPress={pauseWorkout}
+                >
+                  <Ionicons
+                    name={timerState === 'paused' ? 'play' : 'pause'}
+                    size={32}
+                    color="#fff"
+                  />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.stopButton} onPress={stopWorkout}>
+                  <Ionicons name="stop" size={32} color="#fff" />
+                </TouchableOpacity>
+              </View>
+              <TouchableOpacity 
+                style={styles.completeButton} 
+                onPress={completeWorkout}
               >
-                <Ionicons
-                  name={timerState === 'paused' ? 'play' : 'pause'}
-                  size={32}
-                  color="#fff"
-                />
+                <Ionicons name="checkmark-circle" size={24} color="#fff" />
+                <Text style={styles.completeButtonText}>Complete Workout</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.stopButton} onPress={stopWorkout}>
-                <Ionicons name="stop" size={32} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            </>
           )}
         </View>
       </View>
