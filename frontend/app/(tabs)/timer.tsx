@@ -140,7 +140,6 @@ export default function TimerScreen() {
       setTimerState('rest');
       setTimeLeft(settings.restTime);
       speak('Rest time!');
-      sendNotification('Rest Time', `Take a ${settings.restTime} second break`);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       lastSpokenSecond.current = -1;
     } else if (timerState === 'rest') {
