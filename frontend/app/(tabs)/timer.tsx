@@ -175,6 +175,24 @@ export default function TimerScreen() {
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     lastSpokenSecond.current = -1;
+  };
+
+  const completeWorkout = async () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    setTimerState('idle');
+    const completedRounds = currentRound;
+    setCurrentRound(1);
+    setTimeLeft(settings.workTime);
+    speak('Great work! Workout complete!');
+    try {
+      await deactivateKeepAwake();
+    } catch (error) {
+      console.log('Keep awake deactivate not needed on this platform');
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    lastSpokenSecond.current = -1;
 
     // Save workout to history
     saveWorkoutHistory();
