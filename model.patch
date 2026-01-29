@@ -1,35 +1,197 @@
-diff --git a/test_result.md b/test_result.md
-index 6e75767..099fc6d 100644
---- a/test_result.md
-+++ b/test_result.md
-@@ -107,15 +107,18 @@ user_problem_statement: "Build a workout timer that can be controlled on Android
- backend:
-   - task: "Basic API health check"
-     implemented: true
--    working: "NA"
-+    working: true
-     file: "/app/backend/server.py"
-     stuck_count: 0
-     priority: "low"
--    needs_retesting: true
-+    needs_retesting: false
-     status_history:
-       - working: "NA"
-         agent: "main"
-         comment: "Backend has default hello world endpoint, not required for MVP as app uses local storage"
-+      - working: true
-+        agent: "testing"
-+        comment: "✅ All backend tests passed: Health check endpoint (GET /api/) returns correct response, MongoDB connection working, database configuration complete, status endpoints (POST/GET /api/status) functional. Backend service running on supervisor. Created backend_test.py for comprehensive testing. Backend is healthy and ready for future expansion."
+diff --git a/frontend/app/(tabs)/timer.tsx b/frontend/app/(tabs)/timer.tsx
+index 163fb9f..71ce78b 100644
+--- a/frontend/app/(tabs)/timer.tsx
++++ b/frontend/app/(tabs)/timer.tsx
+@@ -7,24 +7,13 @@ import {
+   ScrollView,
+   TextInput,
+   Modal,
+-  Platform,
+ } from 'react-native';
+ import { Ionicons } from '@expo/vector-icons';
+ import * as Speech from 'expo-speech';
+-import { Audio } from 'expo-audio';
+ import * as Haptics from 'expo-haptics';
+ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
+-import * as Notifications from 'expo-notifications';
+ import AsyncStorage from '@react-native-async-storage/async-storage';
  
- frontend:
-   - task: "Interval timer with work/rest cycles"
-@@ -281,4 +284,6 @@ test_plan:
+-Notifications.setNotificationHandler({
+-  handleNotification: async () => ({
+-    shouldShowAlert: true,
+-    shouldPlaySound: true,
+-    shouldSetBadge: false,
+-  }),
+-});
+-
+ type TimerState = 'idle' | 'work' | 'rest' | 'paused';
  
- agent_communication:
-   - agent: "main"
--    message: "Initial implementation complete. Created full-featured workout timer app with voice prompts, notifications, haptics, and watch integration support. App uses local storage (AsyncStorage) for all data persistence. No backend functionality required for MVP. Ready for testing."
-\ No newline at end of file
-+    message: "Initial implementation complete. Created full-featured workout timer app with voice prompts, notifications, haptics, and watch integration support. App uses local storage (AsyncStorage) for all data persistence. No backend functionality required for MVP. Ready for testing."
-+  - agent: "testing"
-+    message: "✅ Backend testing completed successfully. All 4/4 tests passed: Health check endpoint working (GET /api/ returns Hello World), MongoDB connection established, database configuration complete, status endpoints functional (POST/GET /api/status). Backend service running properly on supervisor. Created comprehensive backend_test.py for future testing. Backend is healthy and ready for future expansion beyond MVP."
-\ No newline at end of file
+ interface WorkoutSettings {
+@@ -35,6 +24,7 @@ interface WorkoutSettings {
+ 
+ export default function TimerScreen() {
+   const [timerState, setTimerState] = useState<TimerState>('idle');
++  const [previousState, setPreviousState] = useState<'work' | 'rest'>('work');
+   const [currentRound, setCurrentRound] = useState(1);
+   const [timeLeft, setTimeLeft] = useState(30);
+   const [settings, setSettings] = useState<WorkoutSettings>({
+@@ -43,7 +33,6 @@ export default function TimerScreen() {
+     rounds: 5,
+   });
+   const [showSettings, setShowSettings] = useState(false);
+-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+   const lastSpokenSecond = useRef<number>(-1);
+ 
+@@ -57,23 +46,7 @@ export default function TimerScreen() {
+     };
+   }, []);
+ 
+-  const setupAudio = async () => {
+-    try {
+-      await Audio.setAudioModeAsync({
+-        playsInSilentModeIOS: true,
+-        staysActiveInBackground: true,
+-      });
+-    } catch (error) {
+-      console.error('Error setting up audio:', error);
+-    }
+-  };
+-
+-  const requestPermissions = async () => {
+-    const { status } = await Notifications.requestPermissionsAsync();
+-    if (status !== 'granted') {
+-      console.log('Notification permissions not granted');
+-    }
+-  };
++  // Audio setup and notifications removed per user request
+ 
+   const loadSettings = async () => {
+     try {
+@@ -108,21 +81,6 @@ export default function TimerScreen() {
+     });
+   };
+ 
+-  const sendNotification = async (title: string, body: string) => {
+-    try {
+-      await Notifications.scheduleNotificationAsync({
+-        content: {
+-          title,
+-          body,
+-          sound: true,
+-        },
+-        trigger: null,
+-      });
+-    } catch (error) {
+-      console.log('Notifications not supported on this platform');
+-    }
+-  };
+-
+   const startWorkout = async () => {
+     try {
+       await activateKeepAwakeAsync();
+@@ -139,9 +97,10 @@ export default function TimerScreen() {
+ 
+   const pauseWorkout = () => {
+     if (timerState === 'paused') {
+-      setTimerState(timerState === 'work' ? 'work' : 'rest');
++      setTimerState(previousState);
+       speak('Resuming');
+     } else {
++      setPreviousState(timerState as 'work' | 'rest');
+       setTimerState('paused');
+       speak('Paused');
+     }
+@@ -171,7 +130,6 @@ export default function TimerScreen() {
+       setTimerState('rest');
+       setTimeLeft(settings.restTime);
+       speak('Rest time!');
+-      sendNotification('Rest Time', `Take a ${settings.restTime} second break`);
+       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+       lastSpokenSecond.current = -1;
+     } else if (timerState === 'rest') {
+@@ -184,7 +142,6 @@ export default function TimerScreen() {
+         setTimerState('work');
+         setTimeLeft(settings.workTime);
+         speak(`Round ${currentRound + 1}. Go!`);
+-        sendNotification(`Round ${currentRound + 1}`, 'Time to work!');
+         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+         lastSpokenSecond.current = -1;
+       }
+@@ -225,7 +182,6 @@ export default function TimerScreen() {
+             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+           } else if (newTime <= 3 && newTime > 0 && lastSpokenSecond.current !== newTime) {
+             speak(newTime.toString());
+-            playBeep();
+             lastSpokenSecond.current = newTime;
+             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+           }
+@@ -248,20 +204,17 @@ export default function TimerScreen() {
+ 
+   const handlePhaseComplete = () => {
+     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+-    playBeep();
+ 
+     if (timerState === 'work') {
+       setTimerState('rest');
+       setTimeLeft(settings.restTime);
+       speak('Rest!');
+-      sendNotification('Rest Time', `Take a ${settings.restTime} second break`);
+       lastSpokenSecond.current = -1;
+     } else if (timerState === 'rest') {
+       if (currentRound >= settings.rounds) {
+         // Workout complete
+         setTimerState('idle');
+         speak('Workout complete! Great job!');
+-        sendNotification('Workout Complete', `You finished ${settings.rounds} rounds!`);
+         try {
+           deactivateKeepAwake();
+         } catch (error) {
+@@ -275,7 +228,6 @@ export default function TimerScreen() {
+         setTimerState('work');
+         setTimeLeft(settings.workTime);
+         speak(`Round ${currentRound + 1}. Go!`);
+-        sendNotification(`Round ${currentRound + 1}`, 'Time to work!');
+         lastSpokenSecond.current = -1;
+       }
+     }
+diff --git a/model.patch b/model.patch
+index 7b92a12..e49103c 100644
+--- a/model.patch
++++ b/model.patch
+@@ -1,35 +0,0 @@
+-diff --git a/test_result.md b/test_result.md
+-index 6e75767..099fc6d 100644
+---- a/test_result.md
+-+++ b/test_result.md
+-@@ -107,15 +107,18 @@ user_problem_statement: "Build a workout timer that can be controlled on Android
+- backend:
+-   - task: "Basic API health check"
+-     implemented: true
+--    working: "NA"
+-+    working: true
+-     file: "/app/backend/server.py"
+-     stuck_count: 0
+-     priority: "low"
+--    needs_retesting: true
+-+    needs_retesting: false
+-     status_history:
+-       - working: "NA"
+-         agent: "main"
+-         comment: "Backend has default hello world endpoint, not required for MVP as app uses local storage"
+-+      - working: true
+-+        agent: "testing"
+-+        comment: "✅ All backend tests passed: Health check endpoint (GET /api/) returns correct response, MongoDB connection working, database configuration complete, status endpoints (POST/GET /api/status) functional. Backend service running on supervisor. Created backend_test.py for comprehensive testing. Backend is healthy and ready for future expansion."
+- 
+- frontend:
+-   - task: "Interval timer with work/rest cycles"
+-@@ -281,4 +284,6 @@ test_plan:
+- 
+- agent_communication:
+-   - agent: "main"
+--    message: "Initial implementation complete. Created full-featured workout timer app with voice prompts, notifications, haptics, and watch integration support. App uses local storage (AsyncStorage) for all data persistence. No backend functionality required for MVP. Ready for testing."
+-\ No newline at end of file
+-+    message: "Initial implementation complete. Created full-featured workout timer app with voice prompts, notifications, haptics, and watch integration support. App uses local storage (AsyncStorage) for all data persistence. No backend functionality required for MVP. Ready for testing."
+-+  - agent: "testing"
+-+    message: "✅ Backend testing completed successfully. All 4/4 tests passed: Health check endpoint working (GET /api/ returns Hello World), MongoDB connection established, database configuration complete, status endpoints functional (POST/GET /api/status). Backend service running properly on supervisor. Created comprehensive backend_test.py for future testing. Backend is healthy and ready for future expansion beyond MVP."
+-\ No newline at end of file
