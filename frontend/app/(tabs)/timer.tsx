@@ -32,7 +32,6 @@ export default function TimerScreen() {
     rounds: 5,
   });
   const [showSettings, setShowSettings] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSpokenSecond = useRef<number>(-1);
 
