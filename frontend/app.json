@@ -1,13 +1,16 @@
 {
   "expo": {
-    "name": "frontend",
-    "slug": "frontend",
+    "name": "Workout Timer",
+    "slug": "workout-timer",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "frontend",
+    "scheme": "workout-timer",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "android": {
+      "package": "com.workoutimer.app",
+      "versionCode": 1,
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
