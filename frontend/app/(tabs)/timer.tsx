@@ -42,7 +42,11 @@ export default function TimerScreen() {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
-      deactivateKeepAwake();
+      try {
+        deactivateKeepAwake();
+      } catch (error) {
+        console.log('Keep awake cleanup not needed');
+      }
     };
   }, []);
 
