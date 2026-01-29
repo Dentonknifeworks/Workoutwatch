@@ -1,30 +1,45 @@
-import { Text, View, StyleSheet, Image } from "react-native";
+import { useEffect } from 'react';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { useRouter } from 'expo-router';
 
-const EXPO_PUBLIC_BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL;
+export default function SplashScreen() {
+  const router = useRouter();
 
-export default function Index() {
-  console.log(EXPO_PUBLIC_BACKEND_URL, "EXPO_PUBLIC_BACKEND_URL");
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      router.replace('/(tabs)/timer');
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   return (
     <View style={styles.container}>
-      <Image
-        source={require("../assets/images/app-image.png")}
-        style={styles.image}
-      />
+      <Ionicons name="timer" size={80} color="#00D9FF" />
+      <Text style={styles.title}>Workout Timer</Text>
+      <Text style={styles.subtitle}>Get Ready to Move!</Text>
     </View>
   );
 }
 
+import { Ionicons } from '@expo/vector-icons';
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0c0c0c",
-    alignItems: "center",
-    justifyContent: "center",
+    backgroundColor: '#0c0c0c',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  image: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginTop: 20,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#888',
+    marginTop: 8,
   },
 });
