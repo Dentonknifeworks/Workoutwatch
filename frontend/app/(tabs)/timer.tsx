@@ -94,7 +94,7 @@ export default function TimerScreen() {
     setTimerState('work');
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
-    speak(`Starting workout. ${settings.rounds} rounds. Get ready!`);
+    speak(`Start the workout. ${settings.rounds} rounds.`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     lastSpokenSecond.current = -1;
   };
