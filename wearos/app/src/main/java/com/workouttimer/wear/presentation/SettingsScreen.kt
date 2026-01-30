@@ -147,44 +147,47 @@ fun SettingItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 6.dp)
     ) {
         Text(
             text = label,
-            color = TextGray,
-            fontSize = 12.sp
+            color = CyanPrimary,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold
         )
         
-        Spacer(modifier = Modifier.height(4.dp))
+        Spacer(modifier = Modifier.height(6.dp))
         
         Row(
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Decrease button
-            CompactButton(
+            // Decrease button - BIGGER for easy touch
+            Button(
                 onClick = onDecrease,
-                colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground)
+                colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
+                modifier = Modifier.size(44.dp)
             ) {
-                Text("-", color = TextWhite, fontSize = 18.sp)
+                Text("-", color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
             
-            // Value
+            // Value - bigger and clearer
             Text(
                 text = if (unit.isNotEmpty()) "$value $unit" else value.toString(),
                 color = TextWhite,
-                fontSize = 16.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.width(70.dp)
+                modifier = Modifier.width(80.dp)
             )
             
-            // Increase button
-            CompactButton(
+            // Increase button - BIGGER for easy touch
+            Button(
                 onClick = onIncrease,
-                colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground)
+                colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
+                modifier = Modifier.size(44.dp)
             ) {
-                Text("+", color = TextWhite, fontSize = 18.sp)
+                Text("+", color = TextWhite, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
