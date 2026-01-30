@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="cyan_primary">#00D9FF</color>
+    <color name="orange_rest">#FF9500</color>
+    <color name="green_success">#4CD964</color>
+    <color name="red_stop">#FF3B30</color>
+    <color name="yellow_pause">#FFD60A</color>
+    <color name="dark_background">#0C0C0C</color>
+    <color name="card_background">#1A1A1A</color>
+</resources>
