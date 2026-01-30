@@ -306,42 +306,55 @@ fun TimerScreen(
                 
                 // Control buttons
                 if (timerState == TimerState.IDLE) {
-                    // Start and Settings buttons
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    // Start button - large and prominent
+                    Button(
+                        onClick = { startWorkout() },
+                        colors = ButtonDefaults.buttonColors(backgroundColor = CyanPrimary),
+                        modifier = Modifier.size(60.dp)
                     ) {
-                        // Start button
-                        Button(
-                            onClick = { startWorkout() },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = CyanPrimary),
-                            modifier = Modifier.size(56.dp)
-                        ) {
-                            Text(
-                                text = "▶",
-                                fontSize = 24.sp,
-                                color = DarkBackground
-                            )
-                        }
+                        Text(
+                            text = "▶",
+                            fontSize = 28.sp,
+                            color = DarkBackground
+                        )
                     }
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     
-                    // Settings and Presets
+                    // Settings and Presets - BIGGER buttons with labels
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        CompactButton(
+                        // Settings button - larger with text
+                        Button(
                             onClick = onNavigateToSettings,
-                            colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground)
+                            colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(70.dp)
                         ) {
-                            Text("⚙", fontSize = 16.sp, color = TextWhite)
+                            Text(
+                                text = "SET",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CyanPrimary
+                            )
                         }
                         
-                        CompactButton(
+                        // Presets button - larger with text
+                        Button(
                             onClick = onNavigateToPresets,
-                            colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground)
+                            colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(70.dp)
                         ) {
-                            Text("📋", fontSize = 16.sp, color = TextWhite)
+                            Text(
+                                text = "PRE",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = OrangeRest
+                            )
                         }
                     }
                 } else {
