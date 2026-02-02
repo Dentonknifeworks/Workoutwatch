@@ -4,10 +4,14 @@
     <!-- Wear OS standalone app -->
     <uses-feature android:name="android.hardware.type.watch" />
     
+    <!-- Heart Rate Sensor -->
+    <uses-feature android:name="android.hardware.sensor.heartrate" android:required="false" />
+    
     <!-- Permissions -->
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.BODY_SENSORS" />
 
     <application
         android:allowBackup="true"
