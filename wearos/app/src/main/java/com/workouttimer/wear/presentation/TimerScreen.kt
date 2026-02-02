@@ -102,19 +102,9 @@ fun TimerScreen(
         }
     }
     
-    // Speak function - tries phone first, falls back to watch TTS
+    // Speak function - always use watch TTS for now
     fun speak(text: String) {
-        scope.launch {
-            if (phoneConnected) {
-                val sent = phoneCommunicator.sendSpeakMessage(text)
-                if (!sent) {
-                    // Fallback to local TTS
-                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
-                }
-            } else {
-                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
-            }
-        }
+        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
     }
     
     fun vibrate(pattern: LongArray = longArrayOf(0, 100)) {
