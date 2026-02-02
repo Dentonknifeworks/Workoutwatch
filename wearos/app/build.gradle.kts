@@ -70,6 +70,12 @@ dependencies {
     // Wear
     implementation("androidx.wear:wear:1.3.0")
     
+    // Wearable Data Layer API (for phone communication)
+    implementation("com.google.android.gms:play-services-wearable:18.1.0")
+    
+    // Health Services for Heart Rate
+    implementation("androidx.health:health-services-client:1.0.0-rc01")
+    
     // Debug
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
