@@ -337,76 +337,90 @@ fun TimerScreen(
                 verticalArrangement = Arrangement.Center,
                 modifier = Modifier.padding(8.dp)
             ) {
-                // Status badge
-                Text(
-                    text = statusText,
-                    color = circleColor,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                // Round counter
-                Text(
-                    text = "Round $currentRound/$totalRounds",
-                    color = TextGray,
-                    fontSize = 10.sp
-                )
-                
-                Spacer(modifier = Modifier.height(4.dp))
-                
-                // Time display (large)
-                Text(
-                    text = formatTime(timeLeft),
-                    color = TextWhite,
-                    fontSize = 42.sp,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                )
-                
-                // Heart Rate Display (below timer)
-                if (timerState != TimerState.IDLE && hrPermissionGranted) {
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "❤",
-                            color = RedStop,
-                            fontSize = 12.sp
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = if (currentHR > 0) "$currentHR" else "--",
-                            color = TextWhite,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "avg:",
-                            color = TextGray,
-                            fontSize = 10.sp
-                        )
-                        Text(
-                            text = if (averageHR > 0) "$averageHR" else "--",
-                            color = OrangeRest,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-                
-                // Phone connection indicator
-                if (timerState != TimerState.IDLE && phoneConnected) {
+                // Status badge + Round counter on same line
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "📱 Phone",
-                        color = GreenSuccess,
-                        fontSize = 8.sp
+                        text = statusText,
+                        color = circleColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = " • ",
+                        color = TextGray,
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        text = "$currentRound/$totalRounds",
+                        color = TextGray,
+                        fontSize = 10.sp
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                // Time display (large) with HR on sides
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    // Left side - Current HR
+                    if (timerState != TimerState.IDLE && hrPermissionGranted) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(40.dp)
+                        ) {
+                            Text(
+                                text = "❤",
+                                color = RedStop,
+                                fontSize = 10.sp
+                            )
+                            Text(
+                                text = if (currentHR > 0) "$currentHR" else "--",
+                                color = TextWhite,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(40.dp))
+                    }
+                    
+                    // Center - Timer
+                    Text(
+                        text = formatTime(timeLeft),
+                        color = TextWhite,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center
+                    )
+                    
+                    // Right side - Average HR
+                    if (timerState != TimerState.IDLE && hrPermissionGranted) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(40.dp)
+                        ) {
+                            Text(
+                                text = "avg",
+                                color = TextGray,
+                                fontSize = 8.sp
+                            )
+                            Text(
+                                text = if (averageHR > 0) "$averageHR" else "--",
+                                color = OrangeRest,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    } else {
+                        Spacer(modifier = Modifier.width(40.dp))
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(4.dp))
                 
                 // Control buttons
                 if (timerState == TimerState.IDLE) {
