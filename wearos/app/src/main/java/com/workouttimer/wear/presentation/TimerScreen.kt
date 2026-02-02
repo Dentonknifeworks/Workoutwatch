@@ -1,21 +1,25 @@
 package com.workouttimer.wear.presentation
 
+import android.Manifest
 import android.content.Context
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.speech.tts.TextToSpeech
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.*
+import com.workouttimer.wear.data.HeartRateManager
+import com.workouttimer.wear.data.PhoneCommunicator
 import com.workouttimer.wear.data.PreferencesManager
 import com.workouttimer.wear.presentation.theme.*
 import kotlinx.coroutines.delay
@@ -48,7 +52,27 @@ fun TimerScreen(
     var timeLeft by remember { mutableIntStateOf(workTime) }
     var lastSpokenSecond by remember { mutableIntStateOf(-1) }
     
-    // Text-to-Speech
+    // Heart Rate
+    val heartRateManager = remember { HeartRateManager(context) }
+    val currentHR by heartRateManager.currentHeartRate.collectAsState()
+    val averageHR by heartRateManager.averageHeartRate.collectAsState()
+    var hrPermissionGranted by remember { mutableStateOf(heartRateManager.hasPermission()) }
+    
+    // Phone Communication
+    val phoneCommunicator = remember { PhoneCommunicator(context) }
+    var phoneConnected by remember { mutableStateOf(false) }
+    
+    // Permission launcher
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hrPermissionGranted = isGranted
+        if (isGranted) {
+            heartRateManager.startMonitoring()
+        }
+    }
+    
+    // Text-to-Speech (fallback if phone not connected)
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
     
     // Initialize TTS
@@ -58,19 +82,39 @@ fun TimerScreen(
                 tts?.language = Locale.US
             }
         }
+        // Check phone connection
+        phoneConnected = phoneCommunicator.isPhoneConnected()
     }
     
-    // Cleanup TTS
+    // Cleanup
     DisposableEffect(Unit) {
         onDispose {
             tts?.stop()
             tts?.shutdown()
+            heartRateManager.stopMonitoring()
         }
     }
     
-    // Helper functions
+    // Request HR permission on first launch
+    LaunchedEffect(Unit) {
+        if (!hrPermissionGranted && heartRateManager.hasSensor()) {
+            permissionLauncher.launch(Manifest.permission.BODY_SENSORS)
+        }
+    }
+    
+    // Speak function - tries phone first, falls back to watch TTS
     fun speak(text: String) {
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        scope.launch {
+            if (phoneConnected) {
+                val sent = phoneCommunicator.sendSpeakMessage(text)
+                if (!sent) {
+                    // Fallback to local TTS
+                    tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+                }
+            } else {
+                tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+            }
+        }
     }
     
     fun vibrate(pattern: LongArray = longArrayOf(0, 100)) {
@@ -93,6 +137,11 @@ fun TimerScreen(
     LaunchedEffect(timerState) {
         if (timerState == TimerState.WORK || timerState == TimerState.REST) {
             onKeepAwake(true)
+            // Start heart rate monitoring
+            if (hrPermissionGranted) {
+                heartRateManager.startMonitoring()
+            }
+            
             while (timeLeft > 0 && (timerState == TimerState.WORK || timerState == TimerState.REST)) {
                 delay(1000)
                 if (timerState == TimerState.WORK || timerState == TimerState.REST) {
@@ -138,8 +187,10 @@ fun TimerScreen(
                                 if (currentRound >= totalRounds) {
                                     // Workout complete
                                     timerState = TimerState.IDLE
-                                    speak("Workout complete! Great job!")
+                                    val avgHR = if (averageHR > 0) " Average heart rate: $averageHR" else ""
+                                    speak("Workout complete! Great job!$avgHR")
                                     onKeepAwake(false)
+                                    heartRateManager.stopMonitoring()
                                     // Save workout history
                                     scope.launch {
                                         preferencesManager.recordWorkout(currentRound, workTime, restTime)
@@ -160,19 +211,26 @@ fun TimerScreen(
                     }
                 }
             }
-        } else {
+        } else if (timerState == TimerState.IDLE) {
             onKeepAwake(false)
+            heartRateManager.stopMonitoring()
         }
     }
     
     // Start workout
     fun startWorkout() {
+        heartRateManager.resetAverage()
         timerState = TimerState.WORK
         currentRound = 1
         timeLeft = workTime
-        speak("Starting workout. $totalRounds rounds. Get ready!")
+        speak("Start the workout. $totalRounds rounds.")
         vibrateHeavy()
         lastSpokenSecond = -1
+        
+        // Check phone connection
+        scope.launch {
+            phoneConnected = phoneCommunicator.isPhoneConnected()
+        }
     }
     
     // Pause/Resume
@@ -180,10 +238,14 @@ fun TimerScreen(
         if (timerState == TimerState.PAUSED) {
             timerState = previousState
             speak("Resuming")
+            if (hrPermissionGranted) {
+                heartRateManager.startMonitoring()
+            }
         } else {
             previousState = timerState
             timerState = TimerState.PAUSED
             speak("Paused")
+            heartRateManager.stopMonitoring()
         }
         vibrate()
     }
@@ -203,6 +265,7 @@ fun TimerScreen(
         vibrate(longArrayOf(0, 100, 50, 100))
         lastSpokenSecond = -1
         onKeepAwake(false)
+        heartRateManager.stopMonitoring()
     }
     
     // Skip to next phase
@@ -278,31 +341,72 @@ fun TimerScreen(
                 Text(
                     text = statusText,
                     color = circleColor,
-                    fontSize = 14.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Bold
                 )
-                
-                Spacer(modifier = Modifier.height(4.dp))
                 
                 // Round counter
                 Text(
                     text = "Round $currentRound/$totalRounds",
                     color = TextGray,
-                    fontSize = 12.sp
+                    fontSize = 10.sp
                 )
                 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
                 
-                // Time display (large, circular feel)
+                // Time display (large)
                 Text(
                     text = formatTime(timeLeft),
                     color = TextWhite,
-                    fontSize = 48.sp,
+                    fontSize = 42.sp,
                     fontWeight = FontWeight.Bold,
                     textAlign = TextAlign.Center
                 )
                 
-                Spacer(modifier = Modifier.height(12.dp))
+                // Heart Rate Display (below timer)
+                if (timerState != TimerState.IDLE && hrPermissionGranted) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "❤",
+                            color = RedStop,
+                            fontSize = 12.sp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = if (currentHR > 0) "$currentHR" else "--",
+                            color = TextWhite,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "avg:",
+                            color = TextGray,
+                            fontSize = 10.sp
+                        )
+                        Text(
+                            text = if (averageHR > 0) "$averageHR" else "--",
+                            color = OrangeRest,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+                
+                // Phone connection indicator
+                if (timerState != TimerState.IDLE && phoneConnected) {
+                    Text(
+                        text = "📱 Phone",
+                        color = GreenSuccess,
+                        fontSize = 8.sp
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
                 
                 // Control buttons
                 if (timerState == TimerState.IDLE) {
@@ -310,48 +414,48 @@ fun TimerScreen(
                     Button(
                         onClick = { startWorkout() },
                         colors = ButtonDefaults.buttonColors(backgroundColor = CyanPrimary),
-                        modifier = Modifier.size(60.dp)
+                        modifier = Modifier.size(56.dp)
                     ) {
                         Text(
                             text = "▶",
-                            fontSize = 28.sp,
+                            fontSize = 24.sp,
                             color = DarkBackground
                         )
                     }
                     
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Settings and Presets - BIGGER buttons with labels
+                    // Settings and Presets - buttons with labels
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        // Settings button - larger with text
+                        // Settings button
                         Button(
                             onClick = onNavigateToSettings,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(40.dp)
-                                .width(70.dp)
+                                .height(36.dp)
+                                .width(60.dp)
                         ) {
                             Text(
                                 text = "SET",
-                                fontSize = 12.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CyanPrimary
                             )
                         }
                         
-                        // Presets button - larger with text
+                        // Presets button
                         Button(
                             onClick = onNavigateToPresets,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(40.dp)
-                                .width(70.dp)
+                                .height(36.dp)
+                                .width(60.dp)
                         ) {
                             Text(
                                 text = "PRE",
-                                fontSize = 12.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = OrangeRest
                             )
@@ -368,11 +472,11 @@ fun TimerScreen(
                             colors = ButtonDefaults.buttonColors(
                                 backgroundColor = if (timerState == TimerState.PAUSED) GreenSuccess else YellowPause
                             ),
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Text(
                                 text = if (timerState == TimerState.PAUSED) "▶" else "⏸",
-                                fontSize = 18.sp,
+                                fontSize = 16.sp,
                                 color = DarkBackground
                             )
                         }
@@ -381,17 +485,17 @@ fun TimerScreen(
                         Button(
                             onClick = { stopWorkout() },
                             colors = ButtonDefaults.buttonColors(backgroundColor = RedStop),
-                            modifier = Modifier.size(48.dp)
+                            modifier = Modifier.size(44.dp)
                         ) {
                             Text(
                                 text = "⏹",
-                                fontSize = 18.sp,
+                                fontSize = 16.sp,
                                 color = TextWhite
                             )
                         }
                     }
                     
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
                     
                     // Skip button
                     if (timerState != TimerState.PAUSED) {
@@ -400,8 +504,8 @@ fun TimerScreen(
                             colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess)
                         ) {
                             Text(
-                                text = if (timerState == TimerState.WORK) "Skip→Rest" else "Next Round",
-                                fontSize = 10.sp,
+                                text = if (timerState == TimerState.WORK) "Skip" else "Next",
+                                fontSize = 9.sp,
                                 color = DarkBackground
                             )
                         }
