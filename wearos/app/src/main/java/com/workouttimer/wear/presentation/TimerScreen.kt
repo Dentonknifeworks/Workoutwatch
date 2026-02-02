@@ -72,14 +72,17 @@ fun TimerScreen(
         }
     }
     
-    // Text-to-Speech (fallback if phone not connected)
+    // Text-to-Speech
     var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+    var ttsReady by remember { mutableStateOf(false) }
     
     // Initialize TTS
     LaunchedEffect(Unit) {
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
-                tts?.language = Locale.US
+                val result = tts?.setLanguage(Locale.US)
+                ttsReady = result != TextToSpeech.LANG_MISSING_DATA && 
+                           result != TextToSpeech.LANG_NOT_SUPPORTED
             }
         }
         // Check phone connection
@@ -102,9 +105,11 @@ fun TimerScreen(
         }
     }
     
-    // Speak function - always use watch TTS for now
+    // Speak function with ready check
     fun speak(text: String) {
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        if (ttsReady && tts != null) {
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "workout_tts")
+        }
     }
     
     fun vibrate(pattern: LongArray = longArrayOf(0, 100)) {
