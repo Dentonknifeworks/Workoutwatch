@@ -1,0 +1,28 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="224" fill="#0A0A0A"/>
+  
+  <!-- Outer glow ring -->
+  <circle cx="512" cy="512" r="340" stroke="#00D9FF" stroke-opacity="0.15" stroke-width="60"/>
+  
+  <!-- Progress ring (work phase - ~75%) -->
+  <circle cx="512" cy="512" r="340" stroke="#00D9FF" stroke-width="48" stroke-linecap="round" fill="none"
+    stroke-dasharray="1600 2136" 
+    transform="rotate(-90 512 512)"/>
+  
+  <!-- Rest phase indicator -->
+  <circle cx="512" cy="512" r="340" stroke="#FF9500" stroke-width="48" stroke-linecap="round" fill="none"
+    stroke-dasharray="400 2136" 
+    stroke-dashoffset="-1600"
+    transform="rotate(-90 512 512)"/>
+  
+  <!-- Inner circle background -->
+  <circle cx="512" cy="512" r="260" fill="#141414"/>
+  
+  <!-- Play button -->
+  <path d="M460 380 L460 644 L680 512 Z" fill="#00D9FF"/>
+  
+  <!-- Small pulse dots -->
+  <circle cx="512" cy="200" r="16" fill="#00D9FF"/>
+  <circle cx="824" cy="512" r="12" fill="#FF9500"/>
+</svg>
