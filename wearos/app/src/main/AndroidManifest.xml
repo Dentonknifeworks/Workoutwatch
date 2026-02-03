@@ -4,7 +4,7 @@
     <!-- Wear OS standalone app -->
     <uses-feature android:name="android.hardware.type.watch" />
     
-    <!-- Heart Rate Sensor -->
+    <!-- Heart Rate Sensor (optional) -->
     <uses-feature android:name="android.hardware.sensor.heartrate" android:required="false" />
     
     <!-- Permissions -->
@@ -12,6 +12,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.BODY_SENSORS" />
+    
+    <!-- Permission rationales for Google Play Data Safety -->
+    <!-- VIBRATE: Used for haptic feedback during workout intervals -->
+    <!-- WAKE_LOCK: Keeps screen on during active workouts -->
+    <!-- FOREGROUND_SERVICE: Allows timer to continue when app is minimized -->
+    <!-- BODY_SENSORS: Optional - reads heart rate during workouts (data stored locally only) -->
 
     <application
         android:allowBackup="true"
