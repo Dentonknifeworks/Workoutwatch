@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Install DKW Knife Shop App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { font-family: sans-serif; background-color: #1a1a1a; color: #e0e0e0; display: flex; justify-content: center; padding: 20px; }
+        .container { background-color: #2d2d2d; padding: 30px; border-radius: 12px; max-width: 450px; width: 100%; text-align: center; border: 1px solid #444; }
+        
+        /* THE INSTRUCTIONS SECTION */
+        .install-guide {
+            text-align: left;
+            background: #3d3d3d;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            border-left: 5px solid #d32f2f; /* Forge Red */
+        }
+        .install-guide h2 { color: #fff; margin-top: 0; font-size: 1.2em; }
+        .step { margin-bottom: 12px; line-height: 1.4; }
+        .highlight { color: #ff5252; font-weight: bold; }
+
+        #qrcode { background: white; padding: 10px; display: inline-block; border-radius: 8px; margin: 10px 0; }
+        .download-btn {
+            display: block;
+            background-color: #d32f2f;
+            color: white;
+            padding: 18px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            margin-top: 20px;
+        }
+        .debug-url { font-size: 0.7em; color: #888; word-break: break-all; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>DKW Knife Shop</h1>
+    <p>Official Android Application</p>
+
+    <div class="install-guide">
+        <h2>Read Before Installing:</h2>
+        <div class="step">1. <strong>Download:</strong> Tap the red button below. If Chrome says the file is "harmful," tap <span class="highlight">Download Anyway</span>.</div>
+        <div class="step">2. <strong>Enable:</strong> Open the file. If prompted, go to <strong>Settings</strong> and toggle on <span class="highlight">Allow from this source</span>.</div>
+        <div class="step">3. <strong>Confirm:</strong> Tap <strong>Install</strong>. If Play Protect blocks it, tap <span class="highlight">Install Anyway</span>.</div>
+    </div>
+
+    <div id="qrcode"></div>
+    <p style="font-size: 0.8em;">Scan to download to your phone</p>
+    
+    <a id="downloadLink" href="Phonegym.apk" class="download-btn">DOWNLOAD APK NOW</a>
+    
+    <p id="debugUrl" class="debug-url"></p>
+</div>
+
+<script>
+    // Build the full APK URL
+    var currentUrl = window.location.href;
+    var baseUrl = currentUrl.substring(0, currentUrl.lastIndexOf('/') + 1);
+    var apkUrl = baseUrl + "Phonegym.apk";
+    
+    // Update the download button with full URL
+    document.getElementById('downloadLink').href = apkUrl;
+    
+    // Show debug URL (remove this line after testing)
+    document.getElementById('debugUrl').textContent = "APK URL: " + apkUrl;
+    
+    // Generate QR code
+    var el = document.getElementById('qrcode');
+    new QRCode(el, {
+        text: apkUrl,
+        width: 160,
+        height: 160,
+        correctLevel: QRCode.CorrectLevel.H
+    });
+</script>
+
+</body>
+</html>
