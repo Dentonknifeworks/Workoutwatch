@@ -18,12 +18,13 @@
     },
     "android": {
       "package": "com.workouttimer.app",
-      "versionCode": 2,
+      "versionCode": 3,
       "permissions": [
-        "VIBRATE",
-        "RECEIVE_BOOT_COMPLETED",
-        "POST_NOTIFICATIONS",
-        "FOREGROUND_SERVICE"
+        "android.permission.VIBRATE",
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.WAKE_LOCK"
       ],
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -39,7 +40,8 @@
       [
         "expo-notifications",
         {
-          "sounds": []
+          "sounds": [],
+          "enableBackgroundRemoteNotifications": false
         }
       ]
     ]
