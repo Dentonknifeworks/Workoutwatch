@@ -167,14 +167,16 @@ export default function TimerScreen() {
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `${statusText} - Round ${round}/${settings.rounds}`,
-        body: `Time: ${timeText}`,
+        body: `⏱ ${timeText} remaining\nTap to open app`,
         data: { state, time, round },
         categoryIdentifier: 'workout',
         sticky: true,
         autoDismiss: false,
         priority: Notifications.AndroidNotificationPriority.MAX,
+        vibrate: [0, 100],
+        sound: false,
       },
-      trigger: null, // Show immediately
+      trigger: null,
     });
   };
 
