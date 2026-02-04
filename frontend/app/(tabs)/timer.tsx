@@ -217,6 +217,19 @@ export default function TimerScreen() {
   };
 
   const startWorkout = async () => {
+    // Ask for notification permission first
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      alert('Please enable notifications in Settings to control workouts from your watch');
+    }
+    
     try {
       await activateKeepAwakeAsync();
     } catch (error) {
