@@ -229,7 +229,18 @@ export default function TimerScreen() {
     }
     
     if (finalStatus !== 'granted') {
-      alert('Please enable notifications in Settings to control workouts from your watch');
+      Alert.alert(
+        'Enable Notifications',
+        'Notifications are needed to control your workout from your watch. Please enable them in Settings.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Open Settings', 
+            onPress: () => Linking.openSettings()
+          }
+        ]
+      );
+      return; // Don't start workout without permissions
     }
     
     try {
