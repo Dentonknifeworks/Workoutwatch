@@ -64,7 +64,10 @@ class PhoneCommunicator(private val context: Context) {
                 Log.d(TAG, "No connected phone found for timer command")
                 false
             } else {
+                // The react-native-wear-connectivity library expects the PATH to be a JSON string
+                // with an "event" field. The message content goes in the path, not the data.
                 val message = JSONObject().apply {
+                    put("event", "message")  // Required by the library
                     put("command", command)
                     put("timestamp", System.currentTimeMillis())
                     if (payload != null) {
@@ -75,10 +78,11 @@ class PhoneCommunicator(private val context: Context) {
                 var success = false
                 for (node in nodes) {
                     try {
+                        // Send the JSON as the PATH (not data) - this is how the library works
                         messageClient.sendMessage(
                             node.id,
-                            TIMER_CONTROL_PATH,
-                            message.toString().toByteArray(Charsets.UTF_8)
+                            message.toString(),  // JSON goes in path
+                            null  // No data payload needed
                         ).await()
                         Log.d(TAG, "Timer command '$command' sent to ${node.displayName}")
                         success = true
