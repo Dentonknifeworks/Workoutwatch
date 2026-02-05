@@ -511,6 +511,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 40,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  watchIndicator: {
+    backgroundColor: 'rgba(76, 217, 100, 0.15)',
+    padding: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(76, 217, 100, 0.3)',
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
