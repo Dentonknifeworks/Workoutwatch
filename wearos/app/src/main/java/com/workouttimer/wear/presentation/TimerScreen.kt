@@ -35,6 +35,7 @@ fun TimerScreen(
     preferencesManager: PreferencesManager,
     onNavigateToSettings: () -> Unit,
     onNavigateToPresets: () -> Unit,
+    onNavigateToPhoneControl: () -> Unit,
     onKeepAwake: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
