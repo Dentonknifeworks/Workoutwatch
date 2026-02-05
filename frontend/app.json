@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.workouttimer.app",
-      "versionCode": 4,
+      "versionCode": 5,
       "permissions": [
         "android.permission.VIBRATE",
         "android.permission.RECEIVE_BOOT_COMPLETED",
