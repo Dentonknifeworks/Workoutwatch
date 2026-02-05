@@ -243,6 +243,19 @@ export default function TimerScreen() {
     }
   };
 
+  const applyPreset = (preset: WorkoutPreset) => {
+    const newSettings = {
+      workTime: preset.workTime,
+      restTime: preset.restTime,
+      rounds: preset.rounds,
+    };
+    setSettings(newSettings);
+    setTimeLeft(preset.workTime);
+    saveSettings(newSettings);
+    setShowPresets(false);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
