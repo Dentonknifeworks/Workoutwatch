@@ -680,4 +680,38 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#000',
   },
+  presetsList: {
+    maxHeight: 400,
+  },
+  presetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderLeftWidth: 4,
+  },
+  presetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1a1a1a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  presetInfo: {
+    flex: 1,
+  },
+  presetName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 4,
+  },
+  presetDetails: {
+    fontSize: 14,
+    color: '#888',
+  },
 });
