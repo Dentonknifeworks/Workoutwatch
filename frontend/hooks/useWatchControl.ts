@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
+import { Platform, DeviceEventEmitter } from 'react-native';
 
 // Type definitions for watch messages
 interface WatchMessage {
@@ -21,7 +21,6 @@ export function useWatchControl({
   onStop,
   onSkip,
 }: UseWatchControlProps) {
-  const unsubscribeRef = useRef<(() => void) | null>(null);
   const isInitializedRef = useRef(false);
 
   const handleMessage = useCallback(
@@ -77,37 +76,18 @@ export function useWatchControl({
     
     if (isInitializedRef.current) return;
 
-    const setupListener = async () => {
-      try {
-        // Try to import wear connectivity
-        const wearModule = require('react-native-wear-connectivity');
-        const { watchEvents } = wearModule;
-        
-        if (!watchEvents) {
-          console.log('Watch events not available');
-          return;
-        }
-
-        // Subscribe to messages from the watch
-        unsubscribeRef.current = watchEvents.on('message', (message: WatchMessage | string) => {
-          handleMessage(message);
-        });
-        
-        isInitializedRef.current = true;
-        console.log('Watch listener initialized successfully');
-      } catch (error) {
-        console.log('Wear connectivity not available (will work after EAS build):', error);
-      }
-    };
-
-    setupListener();
+    // Listen for messages from the HeadlessJS task
+    const subscription = DeviceEventEmitter.addListener('message', (data) => {
+      console.log('DeviceEventEmitter received message:', data);
+      handleMessage(data);
+    });
+    
+    isInitializedRef.current = true;
+    console.log('Watch listener initialized successfully');
 
     // Cleanup on unmount
     return () => {
-      if (unsubscribeRef.current) {
-        unsubscribeRef.current();
-        unsubscribeRef.current = null;
-      }
+      subscription.remove();
       isInitializedRef.current = false;
     };
   }, [handleMessage]);
