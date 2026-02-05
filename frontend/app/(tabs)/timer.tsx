@@ -264,7 +264,8 @@ export default function TimerScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+    <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent}>
       <View style={styles.header}>
         <Text style={styles.title}>Workout Timer</Text>
         <View style={styles.headerButtons}>
