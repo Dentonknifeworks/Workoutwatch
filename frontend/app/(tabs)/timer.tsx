@@ -478,9 +478,16 @@ export default function TimerScreen() {
 }
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#0c0c0c',
+  },
   container: {
     flex: 1,
     backgroundColor: '#0c0c0c',
+  },
+  scrollContent: {
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
