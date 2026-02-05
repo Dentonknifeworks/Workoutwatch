@@ -7,25 +7,12 @@ import {
   ScrollView,
   TextInput,
   Modal,
-  Platform,
-  Linking,
-  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
-
-// Configure notifications to show when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: false,
-    shouldSetBadge: false,
-  }),
-});
 
 type TimerState = 'idle' | 'work' | 'rest' | 'paused';
 
@@ -34,9 +21,6 @@ interface WorkoutSettings {
   restTime: number;
   rounds: number;
 }
-
-// Notification channel for Android
-const CHANNEL_ID = 'workout-timer';
 
 export default function TimerScreen() {
   const [timerState, setTimerState] = useState<TimerState>('idle');
@@ -51,23 +35,9 @@ export default function TimerScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSpokenSecond = useRef<number>(-1);
-  const notificationListener = useRef<any>();
-  const responseListener = useRef<any>();
 
   useEffect(() => {
     loadSettings();
-    setupNotifications();
-    
-    // Listen for notification responses (button taps)
-    responseListener.current = Notifications.addNotificationResponseReceivedListener(response => {
-      const action = response.actionIdentifier;
-      if (action === 'PAUSE') {
-        handlePauseFromNotification();
-      } else if (action === 'STOP') {
-        handleStopFromNotification();
-      }
-    });
-
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -77,115 +47,8 @@ export default function TimerScreen() {
       } catch (error) {
         console.log('Keep awake cleanup not needed');
       }
-      Notifications.dismissAllNotificationsAsync();
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
-      }
     };
   }, []);
-
-  const setupNotifications = async () => {
-    // Request permissions
-    const { status } = await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') {
-      console.log('Notification permission not granted');
-      return;
-    }
-
-    // Create notification channel for Android
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-        name: 'Workout Timer',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#00D9FF',
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-        bypassDnd: true,
-      });
-
-      // Set up notification categories with action buttons
-      await Notifications.setNotificationCategoryAsync('workout', [
-        {
-          identifier: 'PAUSE',
-          buttonTitle: '⏸ Pause',
-          options: { opensAppToForeground: false },
-        },
-        {
-          identifier: 'STOP',
-          buttonTitle: '⏹ Stop',
-          options: { opensAppToForeground: false },
-        },
-      ]);
-    }
-  };
-
-  // Refs to store current state for notification handlers
-  const timerStateRef = useRef(timerState);
-  const previousStateRef = useRef(previousState);
-  
-  useEffect(() => {
-    timerStateRef.current = timerState;
-    previousStateRef.current = previousState;
-  }, [timerState, previousState]);
-
-  const handlePauseFromNotification = () => {
-    if (timerStateRef.current === 'paused') {
-      setTimerState(previousStateRef.current);
-      speak('Resuming');
-      updateNotification(previousStateRef.current, timeLeft, currentRound);
-    } else if (timerStateRef.current === 'work' || timerStateRef.current === 'rest') {
-      setPreviousState(timerStateRef.current as 'work' | 'rest');
-      setTimerState('paused');
-      speak('Paused');
-      updateNotification('paused', timeLeft, currentRound);
-    }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-  };
-
-  const handleStopFromNotification = () => {
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
-    setTimerState('idle');
-    setCurrentRound(1);
-    setTimeLeft(settings.workTime);
-    speak('Workout stopped');
-    Notifications.dismissAllNotificationsAsync();
-    try {
-      deactivateKeepAwake();
-    } catch (error) {
-      console.log('Keep awake deactivate not needed');
-    }
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    lastSpokenSecond.current = -1;
-  };
-
-  const showWorkoutNotification = async (state: TimerState, time: number, round: number) => {
-    const statusText = state === 'work' ? '💪 WORK' : state === 'rest' ? '😮‍💨 REST' : '⏸ PAUSED';
-    const mins = Math.floor(time / 60);
-    const secs = time % 60;
-    const timeText = `${mins}:${secs.toString().padStart(2, '0')}`;
-
-    await Notifications.scheduleNotificationAsync({
-      content: {
-        title: `${statusText} - Round ${round}/${settings.rounds}`,
-        body: `⏱ ${timeText} remaining\nTap to open app`,
-        data: { state, time, round },
-        categoryIdentifier: 'workout',
-        sticky: true,
-        autoDismiss: false,
-        priority: Notifications.AndroidNotificationPriority.MAX,
-        vibrate: [0, 100],
-        sound: false,
-      },
-      trigger: null,
-    });
-  };
-
-  const updateNotification = async (state: TimerState, time: number, round: number) => {
-    await Notifications.dismissAllNotificationsAsync();
-    await showWorkoutNotification(state, time, round);
-  };
 
   const loadSettings = async () => {
     try {
@@ -208,9 +71,6 @@ export default function TimerScreen() {
   };
 
   const speak = (text: string) => {
-    if (Speech.isSpeakingAsync()) {
-      Speech.stop();
-    }
     Speech.speak(text, {
       language: 'en-US',
       pitch: 1.0,
@@ -219,30 +79,6 @@ export default function TimerScreen() {
   };
 
   const startWorkout = async () => {
-    // Ask for notification permission first
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    
-    if (finalStatus !== 'granted') {
-      Alert.alert(
-        'Enable Notifications',
-        'Notifications are needed to control your workout from your watch. Please enable them in Settings.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open Settings', 
-            onPress: () => Linking.openSettings()
-          }
-        ]
-      );
-      return; // Don't start workout without permissions
-    }
-    
     try {
       await activateKeepAwakeAsync();
     } catch (error) {
@@ -254,21 +90,16 @@ export default function TimerScreen() {
     speak(`Start the workout. ${settings.rounds} rounds.`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     lastSpokenSecond.current = -1;
-    
-    // Show notification with controls
-    await showWorkoutNotification('work', settings.workTime, 1);
   };
 
   const pauseWorkout = () => {
     if (timerState === 'paused') {
       setTimerState(previousState);
       speak('Resuming');
-      updateNotification(previousState, timeLeft, currentRound);
     } else {
       setPreviousState(timerState as 'work' | 'rest');
       setTimerState('paused');
       speak('Paused');
-      updateNotification('paused', timeLeft, currentRound);
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
@@ -281,7 +112,6 @@ export default function TimerScreen() {
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
     speak('Workout stopped');
-    await Notifications.dismissAllNotificationsAsync();
     try {
       await deactivateKeepAwake();
     } catch (error) {
@@ -298,19 +128,16 @@ export default function TimerScreen() {
       speak('Rest time!');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       lastSpokenSecond.current = -1;
-      updateNotification('rest', settings.restTime, currentRound);
     } else if (timerState === 'rest') {
       if (currentRound >= settings.rounds) {
         stopWorkout();
       } else {
-        const nextRound = currentRound + 1;
-        setCurrentRound(nextRound);
+        setCurrentRound(currentRound + 1);
         setTimerState('work');
         setTimeLeft(settings.workTime);
-        speak(`Round ${nextRound}. Go!`);
+        speak(`Round ${currentRound + 1}. Go!`);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         lastSpokenSecond.current = -1;
-        updateNotification('work', settings.workTime, nextRound);
       }
     }
   };
@@ -332,28 +159,16 @@ export default function TimerScreen() {
     }
   };
 
-  // Update notification every 5 seconds to show current time
-  const notificationUpdateRef = useRef(0);
-
   useEffect(() => {
     if (timerState === 'work' || timerState === 'rest') {
       intervalRef.current = setInterval(() => {
         setTimeLeft((prev) => {
           const newTime = prev - 1;
 
-          // Update notification every 5 seconds
-          notificationUpdateRef.current++;
-          if (notificationUpdateRef.current >= 5) {
-            notificationUpdateRef.current = 0;
-            updateNotification(timerState, newTime, currentRound);
-          }
-
-          // Voice announcements at specific intervals
           if (newTime === 10 && lastSpokenSecond.current !== 10) {
             speak('10 seconds');
             lastSpokenSecond.current = 10;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            updateNotification(timerState, newTime, currentRound);
           } else if (newTime === 5 && lastSpokenSecond.current !== 5) {
             speak('5');
             lastSpokenSecond.current = 5;
@@ -378,7 +193,7 @@ export default function TimerScreen() {
         }
       };
     }
-  }, [timerState, currentRound]);
+  }, [timerState]);
 
   const handlePhaseComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -388,12 +203,10 @@ export default function TimerScreen() {
       setTimeLeft(settings.restTime);
       speak('Rest!');
       lastSpokenSecond.current = -1;
-      updateNotification('rest', settings.restTime, currentRound);
     } else if (timerState === 'rest') {
       if (currentRound >= settings.rounds) {
         setTimerState('idle');
         speak('Workout complete! Great job!');
-        Notifications.dismissAllNotificationsAsync();
         try {
           deactivateKeepAwake();
         } catch (error) {
@@ -402,13 +215,11 @@ export default function TimerScreen() {
         saveWorkoutHistory();
         lastSpokenSecond.current = -1;
       } else {
-        const nextRound = currentRound + 1;
-        setCurrentRound(nextRound);
+        setCurrentRound(currentRound + 1);
         setTimerState('work');
         setTimeLeft(settings.workTime);
-        speak(`Round ${nextRound}. Go!`);
+        speak(`Round ${currentRound + 1}. Go!`);
         lastSpokenSecond.current = -1;
-        updateNotification('work', settings.workTime, nextRound);
       }
     }
   };
@@ -432,12 +243,7 @@ export default function TimerScreen() {
       </View>
 
       <View style={styles.timerContainer}>
-        <View style={[
-          styles.statusBadge,
-          timerState === 'work' && styles.workBadge,
-          timerState === 'rest' && styles.restBadge,
-          timerState === 'paused' && styles.pausedBadge,
-        ]}>
+        <View style={styles.statusBadge}>
           <Text style={styles.statusText}>
             {timerState === 'idle' && 'Ready'}
             {timerState === 'work' && 'WORK'}
@@ -500,15 +306,6 @@ export default function TimerScreen() {
             </>
           )}
         </View>
-        
-        {timerState !== 'idle' && (
-          <View style={styles.watchHint}>
-            <Ionicons name="watch-outline" size={16} color="#888" />
-            <Text style={styles.watchHintText}>
-              Controls available on watch notification
-            </Text>
-          </View>
-        )}
       </View>
 
       <View style={styles.infoCard}>
@@ -628,15 +425,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginBottom: 16,
   },
-  workBadge: {
-    backgroundColor: '#00D9FF',
-  },
-  restBadge: {
-    backgroundColor: '#FF9500',
-  },
-  pausedBadge: {
-    backgroundColor: '#FFD60A',
-  },
   statusText: {
     fontSize: 16,
     fontWeight: 'bold',
@@ -730,20 +518,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  watchHint: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#1a1a1a',
-    borderRadius: 20,
-  },
-  watchHintText: {
-    color: '#888',
-    fontSize: 12,
   },
   infoCard: {
     margin: 20,
