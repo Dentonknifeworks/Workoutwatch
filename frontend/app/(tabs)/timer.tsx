@@ -37,6 +37,102 @@ export default function TimerScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSpokenSecond = useRef<number>(-1);
+  
+  // Refs to hold current state for watch callbacks
+  const timerStateRef = useRef(timerState);
+  const settingsRef = useRef(settings);
+  
+  // Keep refs in sync with state
+  useEffect(() => {
+    timerStateRef.current = timerState;
+  }, [timerState]);
+  
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
+
+  // Watch control handlers (using refs to avoid stale closures)
+  const handleWatchStart = useCallback(async () => {
+    console.log('Watch triggered START');
+    try {
+      await activateKeepAwakeAsync();
+    } catch (error) {
+      console.log('Keep awake not supported:', error);
+    }
+    setTimerState('work');
+    setCurrentRound(1);
+    setTimeLeft(settingsRef.current.workTime);
+    Speech.speak(`Start the workout. ${settingsRef.current.rounds} rounds.`, {
+      language: 'en-US',
+      pitch: 1.0,
+      rate: 0.9,
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+    lastSpokenSecond.current = -1;
+  }, []);
+
+  const handleWatchPause = useCallback(() => {
+    console.log('Watch triggered PAUSE');
+    if (timerStateRef.current === 'paused') {
+      // Resume - need to get previous state, default to 'work'
+      setTimerState('work');
+      Speech.speak('Resuming', { language: 'en-US', pitch: 1.0, rate: 0.9 });
+    } else if (timerStateRef.current !== 'idle') {
+      setPreviousState(timerStateRef.current as 'work' | 'rest');
+      setTimerState('paused');
+      Speech.speak('Paused', { language: 'en-US', pitch: 1.0, rate: 0.9 });
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  }, []);
+
+  const handleWatchStop = useCallback(async () => {
+    console.log('Watch triggered STOP');
+    setTimerState('idle');
+    setCurrentRound(1);
+    setTimeLeft(settingsRef.current.workTime);
+    Speech.speak('Workout stopped', { language: 'en-US', pitch: 1.0, rate: 0.9 });
+    try {
+      await deactivateKeepAwake();
+    } catch (error) {
+      console.log('Keep awake deactivate error:', error);
+    }
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    lastSpokenSecond.current = -1;
+  }, []);
+
+  const handleWatchSkip = useCallback(() => {
+    console.log('Watch triggered SKIP');
+    if (timerStateRef.current === 'work') {
+      setTimerState('rest');
+      setTimeLeft(settingsRef.current.restTime);
+      Speech.speak('Rest time!', { language: 'en-US', pitch: 1.0, rate: 0.9 });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      lastSpokenSecond.current = -1;
+    } else if (timerStateRef.current === 'rest') {
+      // Move to next round or stop
+      setCurrentRound((prev) => {
+        if (prev >= settingsRef.current.rounds) {
+          handleWatchStop();
+          return 1;
+        } else {
+          setTimerState('work');
+          setTimeLeft(settingsRef.current.workTime);
+          Speech.speak(`Round ${prev + 1}. Go!`, { language: 'en-US', pitch: 1.0, rate: 0.9 });
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          lastSpokenSecond.current = -1;
+          return prev + 1;
+        }
+      });
+    }
+  }, [handleWatchStop]);
+
+  // Initialize watch control listener
+  const { isSupported: watchControlSupported } = useWatchControl({
+    onStart: handleWatchStart,
+    onPause: handleWatchPause,
+    onStop: handleWatchStop,
+    onSkip: handleWatchSkip,
+  });
 
   useEffect(() => {
     loadSettings();
