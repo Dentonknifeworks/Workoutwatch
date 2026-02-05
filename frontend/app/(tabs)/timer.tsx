@@ -430,6 +430,46 @@ export default function TimerScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Presets Modal */}
+      <Modal
+        visible={showPresets}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowPresets(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Workout Presets</Text>
+              <TouchableOpacity onPress={() => setShowPresets(false)}>
+                <Ionicons name="close" size={28} color="#fff" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.presetsList}>
+              {PRESETS.map((preset, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.presetItem, { borderLeftColor: preset.color }]}
+                  onPress={() => applyPreset(preset)}
+                >
+                  <View style={styles.presetIcon}>
+                    <Ionicons name={preset.icon as any} size={24} color={preset.color} />
+                  </View>
+                  <View style={styles.presetInfo}>
+                    <Text style={styles.presetName}>{preset.name}</Text>
+                    <Text style={styles.presetDetails}>
+                      {preset.workTime}s work / {preset.restTime}s rest / {preset.rounds} rounds
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#666" />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
