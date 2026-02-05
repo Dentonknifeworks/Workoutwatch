@@ -473,6 +473,7 @@ export default function TimerScreen() {
         </View>
       </Modal>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
