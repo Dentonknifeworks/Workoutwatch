@@ -1,5 +1,5 @@
 import { useEffect, useCallback, useRef } from 'react';
-import { Platform } from 'react-native';
+import { Platform, NativeModules, NativeEventEmitter } from 'react-native';
 
 // Type definitions for watch messages
 interface WatchMessage {
@@ -14,23 +14,6 @@ interface UseWatchControlProps {
   onStop: () => void;
   onSkip: () => void;
 }
-
-// Dynamic import for wear connectivity (only works on Android with native module)
-let watchEvents: any = null;
-
-const loadWearConnectivity = async () => {
-  if (Platform.OS === 'android') {
-    try {
-      const module = await import('react-native-wear-connectivity');
-      watchEvents = module.watchEvents;
-      return true;
-    } catch (error) {
-      console.log('Wear connectivity not available:', error);
-      return false;
-    }
-  }
-  return false;
-};
 
 export function useWatchControl({
   onStart,
@@ -87,26 +70,33 @@ export function useWatchControl({
   );
 
   useEffect(() => {
+    if (Platform.OS !== 'android') {
+      console.log('Watch connectivity only available on Android');
+      return;
+    }
+    
+    if (isInitializedRef.current) return;
+
     const setupListener = async () => {
-      if (isInitializedRef.current) return;
-
-      const isAvailable = await loadWearConnectivity();
-      
-      if (!isAvailable || !watchEvents) {
-        console.log('Watch connectivity not available on this platform');
-        return;
-      }
-
       try {
+        // Try to import wear connectivity
+        const wearModule = require('react-native-wear-connectivity');
+        const { watchEvents } = wearModule;
+        
+        if (!watchEvents) {
+          console.log('Watch events not available');
+          return;
+        }
+
         // Subscribe to messages from the watch
-        unsubscribeRef.current = watchEvents.on('message', (message: any) => {
+        unsubscribeRef.current = watchEvents.on('message', (message: WatchMessage | string) => {
           handleMessage(message);
         });
         
         isInitializedRef.current = true;
-        console.log('Watch listener initialized');
+        console.log('Watch listener initialized successfully');
       } catch (error) {
-        console.error('Failed to setup watch listener:', error);
+        console.log('Wear connectivity not available (will work after EAS build):', error);
       }
     };
 
