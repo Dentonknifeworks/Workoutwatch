@@ -435,21 +435,21 @@ fun TimerScreen(
                     
                     Spacer(modifier = Modifier.height(8.dp))
                     
-                    // Settings and Presets - buttons with labels
+                    // Settings, Presets, and Phone Control buttons
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         // Settings button
                         Button(
                             onClick = onNavigateToSettings,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(36.dp)
-                                .width(60.dp)
+                                .height(32.dp)
+                                .width(50.dp)
                         ) {
                             Text(
                                 text = "SET",
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CyanPrimary
                             )
@@ -460,14 +460,28 @@ fun TimerScreen(
                             onClick = onNavigateToPresets,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(36.dp)
-                                .width(60.dp)
+                                .height(32.dp)
+                                .width(50.dp)
                         ) {
                             Text(
                                 text = "PRE",
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = OrangeRest
+                            )
+                        }
+                        
+                        // Phone Control button
+                        Button(
+                            onClick = onNavigateToPhoneControl,
+                            colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
+                            modifier = Modifier
+                                .height(32.dp)
+                                .width(50.dp)
+                        ) {
+                            Text(
+                                text = "📱",
+                                fontSize = 12.sp
                             )
                         }
                     }
