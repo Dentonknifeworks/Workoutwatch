@@ -486,10 +486,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 40,
   },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  presetsButton: {
+    padding: 8,
   },
   settingsButton: {
     padding: 8,
