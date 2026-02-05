@@ -49,6 +49,7 @@ fun WearApp(
                 preferencesManager = preferencesManager,
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToPresets = { navController.navigate("presets") },
+                onNavigateToPhoneControl = { navController.navigate("phone_control") },
                 onKeepAwake = onKeepAwake
             )
         }
@@ -62,6 +63,11 @@ fun WearApp(
             PresetsScreen(
                 preferencesManager = preferencesManager,
                 onBack = { navController.popBackStack() }
+            )
+        }
+        composable("phone_control") {
+            PhoneControlScreen(
+                onNavigateBack = { navController.popBackStack() }
             )
         }
     }
