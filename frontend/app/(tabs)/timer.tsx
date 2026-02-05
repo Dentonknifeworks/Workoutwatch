@@ -22,6 +22,24 @@ interface WorkoutSettings {
   rounds: number;
 }
 
+interface WorkoutPreset {
+  name: string;
+  workTime: number;
+  restTime: number;
+  rounds: number;
+  icon: string;
+  color: string;
+}
+
+const PRESETS: WorkoutPreset[] = [
+  { name: 'HIIT', workTime: 30, restTime: 10, rounds: 8, icon: 'flame', color: '#FF3B30' },
+  { name: 'Tabata', workTime: 20, restTime: 10, rounds: 8, icon: 'flash', color: '#FF9500' },
+  { name: 'Strength', workTime: 45, restTime: 90, rounds: 5, icon: 'barbell', color: '#5856D6' },
+  { name: 'Cardio', workTime: 60, restTime: 30, rounds: 6, icon: 'heart', color: '#FF2D55' },
+  { name: 'Quick', workTime: 20, restTime: 10, rounds: 4, icon: 'timer', color: '#00D9FF' },
+  { name: 'Endurance', workTime: 90, restTime: 30, rounds: 10, icon: 'fitness', color: '#4CD964' },
+];
+
 export default function TimerScreen() {
   const [timerState, setTimerState] = useState<TimerState>('idle');
   const [previousState, setPreviousState] = useState<'work' | 'rest'>('work');
@@ -33,6 +51,7 @@ export default function TimerScreen() {
     rounds: 5,
   });
   const [showSettings, setShowSettings] = useState(false);
+  const [showPresets, setShowPresets] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSpokenSecond = useRef<number>(-1);
 
