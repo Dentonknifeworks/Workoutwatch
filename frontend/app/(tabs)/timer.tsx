@@ -332,12 +332,19 @@ export default function TimerScreen() {
     <ScrollView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Workout Timer</Text>
-        <TouchableOpacity
-          style={styles.settingsButton}
-          onPress={() => setShowSettings(true)}
-        >
-          <Ionicons name="settings" size={28} color="#00D9FF" />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          {Platform.OS === 'android' && (
+            <View style={styles.watchIndicator}>
+              <Ionicons name="watch-outline" size={20} color="#4CD964" />
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.settingsButton}
+            onPress={() => setShowSettings(true)}
+          >
+            <Ionicons name="settings" size={28} color="#00D9FF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.timerContainer}>
