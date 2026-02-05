@@ -7,6 +7,7 @@ import {
   ScrollView,
   TextInput,
   Modal,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
