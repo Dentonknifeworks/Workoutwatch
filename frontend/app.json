@@ -19,7 +19,9 @@
       "infoPlist": {
         "NSMicrophoneUsageDescription": "We need microphone access for voice prompts",
         "NSSpeechRecognitionUsageDescription": "Enable voice control for timer",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -57,6 +59,12 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "752016cb-93b9-4b96-99de-7b09eb423d36"
+      }
     }
   }
 }

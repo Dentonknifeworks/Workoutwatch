@@ -21,7 +21,10 @@ interface WorkoutSettings {
   workTime: number;
   restTime: number;
   rounds: number;
+  totalMinutes: number;
 }
+
+const DEFAULT_TOTAL_MINUTES = 90;
 
 interface WorkoutPreset {
   name: string;
@@ -50,10 +53,12 @@ export default function TimerScreen() {
     workTime: 30,
     restTime: 10,
     rounds: 5,
+    totalMinutes: DEFAULT_TOTAL_MINUTES,
   });
+  const [totalTimeLeft, setTotalTimeLeft] = useState(DEFAULT_TOTAL_MINUTES * 60);
   const [showSettings, setShowSettings] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastSpokenSecond = useRef<number>(-1);
 
   useEffect(() => {
@@ -104,10 +109,12 @@ export default function TimerScreen() {
     } catch (error) {
       console.log('Keep awake not supported on this platform:', error);
     }
+    const totalSeconds = (settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60;
     setTimerState('work');
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
-    speak(`Start the workout. ${settings.rounds} rounds.`);
+    setTotalTimeLeft(totalSeconds);
+    speak(`Start the workout. ${settings.rounds} rounds. Total time ${settings.totalMinutes || DEFAULT_TOTAL_MINUTES} minutes.`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     lastSpokenSecond.current = -1;
   };
@@ -131,6 +138,7 @@ export default function TimerScreen() {
     setTimerState('idle');
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
+    setTotalTimeLeft((settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60);
     speak('Workout stopped');
     try {
       await deactivateKeepAwake();
@@ -172,11 +180,25 @@ export default function TimerScreen() {
         totalRounds: settings.rounds,
         workTime: settings.workTime,
         restTime: settings.restTime,
+        totalMinutes: settings.totalMinutes || DEFAULT_TOTAL_MINUTES,
       });
       await AsyncStorage.setItem('workoutHistory', JSON.stringify(historyArray.slice(0, 50)));
     } catch (error) {
       console.error('Error saving history:', error);
     }
+  };
+
+  const handleTotalTimeReached = () => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+    }
+    setTimerState('idle');
+    setTimeLeft(settings.workTime);
+    setTotalTimeLeft((settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60);
+    speak('Workout complete. Total time reached!');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    saveWorkoutHistory();
+    lastSpokenSecond.current = -1;
   };
 
   useEffect(() => {
@@ -204,6 +226,14 @@ export default function TimerScreen() {
             return 0;
           }
           return newTime;
+        });
+
+        setTotalTimeLeft((prev) => {
+          const newTotalTime = Math.max(0, prev - 1);
+          if (newTotalTime === 0) {
+            handleTotalTimeReached();
+          }
+          return newTotalTime;
         });
       }, 1000);
 
@@ -249,9 +279,11 @@ export default function TimerScreen() {
       workTime: preset.workTime,
       restTime: preset.restTime,
       rounds: preset.rounds,
+      totalMinutes: settings.totalMinutes || DEFAULT_TOTAL_MINUTES,
     };
     setSettings(newSettings);
     setTimeLeft(preset.workTime);
+    setTotalTimeLeft((settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60);
     saveSettings(newSettings);
     setShowPresets(false);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
@@ -262,6 +294,12 @@ export default function TimerScreen() {
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  const totalWorkoutSeconds = (settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60;
+  const workoutProgress = Math.min(
+    100,
+    Math.max(0, ((totalWorkoutSeconds - totalTimeLeft) / totalWorkoutSeconds) * 100)
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -350,6 +388,19 @@ export default function TimerScreen() {
         </View>
       </View>
 
+      <View style={styles.progressCard}>
+        <Text style={styles.progressHeader}>Workout Progress</Text>
+        <View style={styles.progressBarBackground}>
+          <View
+            style={[
+              styles.progressBarFill,
+              { width: `${workoutProgress}%` },
+            ]}
+          />
+        </View>
+        <Text style={styles.progressText}>{Math.round(workoutProgress)}% complete</Text>
+      </View>
+
       <View style={styles.infoCard}>
         <View style={styles.infoRow}>
           <Ionicons name="fitness" size={24} color="#00D9FF" />
@@ -366,6 +417,14 @@ export default function TimerScreen() {
           <Text style={styles.infoLabel}>Rounds</Text>
           <Text style={styles.infoValue}>{settings.rounds}</Text>
         </View>
+        <View style={styles.infoRow}>
+          <Ionicons name="time" size={24} color="#FFD60A" />
+          <Text style={styles.infoLabel}>Total Time</Text>
+          <Text style={styles.infoValue}>{settings.totalMinutes || DEFAULT_TOTAL_MINUTES} min</Text>
+        </View>
+        <Text style={styles.totalTimeText}>
+          Remaining total: {formatTime(totalTimeLeft)}
+        </Text>
       </View>
 
       <Modal
@@ -419,12 +478,31 @@ export default function TimerScreen() {
               />
             </View>
 
+            <View style={styles.settingItem}>
+              <Text style={styles.settingLabel}>Total Workout Time (minutes)</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="number-pad"
+                value={(settings.totalMinutes || DEFAULT_TOTAL_MINUTES).toString()}
+                onChangeText={(text) => {
+                  const value = parseInt(text) || DEFAULT_TOTAL_MINUTES;
+                  setSettings({ ...settings, totalMinutes: value });
+                  setTotalTimeLeft(value * 60);
+                }}
+              />
+            </View>
+
             <TouchableOpacity
               style={styles.saveButton}
               onPress={() => {
-                saveSettings(settings);
+                const sanitizedSettings = {
+                  ...settings,
+                  totalMinutes: Math.max(1, settings.totalMinutes || DEFAULT_TOTAL_MINUTES),
+                };
+                saveSettings(sanitizedSettings);
                 setShowSettings(false);
-                setTimeLeft(settings.workTime);
+                setTimeLeft(sanitizedSettings.workTime);
+                setTotalTimeLeft(sanitizedSettings.totalMinutes * 60);
               }}
             >
               <Text style={styles.saveButtonText}>Save Settings</Text>
@@ -617,6 +695,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  progressCard: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 16,
+    padding: 16,
+  },
+  progressHeader: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 12,
+  },
+  progressBarBackground: {
+    height: 12,
+    borderRadius: 999,
+    backgroundColor: '#2a2a2a',
+    overflow: 'hidden',
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 999,
+    backgroundColor: '#4CD964',
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#ddd',
+    marginTop: 10,
+    textAlign: 'center',
+  },
   infoCard: {
     margin: 20,
     backgroundColor: '#1a1a1a',
@@ -638,6 +746,13 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  totalTimeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFD60A',
+    marginTop: 4,
+    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,
