@@ -41,14 +41,15 @@ class PreferencesManager(private val context: Context) {
     }
     
     val totalMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[TOTAL_MINUTES] ?: 0
+        prefs[TOTAL_MINUTES] ?: 90
     }
     
-    suspend fun saveSettings(workTime: Int, restTime: Int, rounds: Int) {
+    suspend fun saveSettings(workTime: Int, restTime: Int, rounds: Int, totalMinutes: Int = 90) {
         context.dataStore.edit { prefs ->
             prefs[WORK_TIME] = workTime
             prefs[REST_TIME] = restTime
             prefs[ROUNDS] = rounds
+            prefs[TOTAL_MINUTES] = totalMinutes.coerceAtLeast(1)
         }
     }
     

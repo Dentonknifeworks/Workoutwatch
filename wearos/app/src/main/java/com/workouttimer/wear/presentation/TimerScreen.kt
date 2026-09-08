@@ -2,16 +2,24 @@ package com.workouttimer.wear.presentation
 
 import android.Manifest
 import android.content.Context
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,17 +48,35 @@ fun TimerScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val audioManager = remember {
+        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    }
+    val audioFocusRequest = remember {
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
+                    .setOnAudioFocusChangeListener { }
+            .setWillPauseWhenDucked(true)
+            .build()
+    }
     
     // Settings from DataStore
     val workTime by preferencesManager.workTime.collectAsState(initial = 40)
     val restTime by preferencesManager.restTime.collectAsState(initial = 60)
     val totalRounds by preferencesManager.rounds.collectAsState(initial = 5)
+    val totalMinutes by preferencesManager.totalMinutes.collectAsState(initial = 90)
     
     // Timer state
     var timerState by remember { mutableStateOf(TimerState.IDLE) }
     var previousState by remember { mutableStateOf(TimerState.WORK) }
     var currentRound by remember { mutableIntStateOf(1) }
     var timeLeft by remember { mutableIntStateOf(workTime) }
+    var totalTimeLeft by remember { mutableIntStateOf(totalMinutes * 60) }
+    var totalTimerRunning by remember { mutableStateOf(false) }
     var lastSpokenSecond by remember { mutableIntStateOf(-1) }
     
     // Heart Rate
@@ -93,6 +119,7 @@ fun TimerScreen(
     // Cleanup
     DisposableEffect(Unit) {
         onDispose {
+            audioManager.abandonAudioFocusRequest(audioFocusRequest)
             tts?.stop()
             tts?.shutdown()
             heartRateManager.stopMonitoring()
@@ -109,6 +136,18 @@ fun TimerScreen(
     // Speak function with ready check
     fun speak(text: String) {
         if (ttsReady && tts != null) {
+            audioManager.requestAudioFocus(audioFocusRequest)
+            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                override fun onStart(utteranceId: String?) = Unit
+
+                override fun onDone(utteranceId: String?) {
+                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
+                }
+
+                override fun onError(utteranceId: String?) {
+                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
+                }
+            })
             tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "workout_tts")
         }
     }
@@ -126,6 +165,44 @@ fun TimerScreen(
     LaunchedEffect(workTime) {
         if (timerState == TimerState.IDLE) {
             timeLeft = workTime
+        }
+    }
+
+    LaunchedEffect(totalMinutes) {
+        if (timerState == TimerState.IDLE) {
+            totalTimeLeft = totalMinutes * 60
+        }
+    }
+
+    // Total workout time runs independently of each work/rest phase.
+    LaunchedEffect(totalTimerRunning) {
+        if (totalTimerRunning) {
+            onKeepAwake(true)
+            var remainingTotalTime = totalTimeLeft
+            while (remainingTotalTime > 0 && totalTimerRunning) {
+                delay(1000)
+                remainingTotalTime--
+                totalTimeLeft = remainingTotalTime
+            }
+
+            if (remainingTotalTime <= 0 && totalTimerRunning) {
+                totalTimerRunning = false
+                vibrateHeavy()
+                timerState = TimerState.IDLE
+                speak("Workout complete. Total time reached!")
+                onKeepAwake(false)
+                heartRateManager.stopMonitoring()
+                scope.launch {
+                    preferencesManager.recordWorkout(
+                        (currentRound - 1).coerceAtLeast(0),
+                        workTime,
+                        restTime
+                    )
+                }
+                currentRound = 1
+                timeLeft = workTime
+                lastSpokenSecond = -1
+            }
         }
     }
     
@@ -208,7 +285,9 @@ fun TimerScreen(
                 }
             }
         } else if (timerState == TimerState.IDLE) {
-            onKeepAwake(false)
+            if (!totalTimerRunning) {
+                onKeepAwake(false)
+            }
             heartRateManager.stopMonitoring()
         }
     }
@@ -217,9 +296,11 @@ fun TimerScreen(
     fun startWorkout() {
         heartRateManager.resetAverage()
         timerState = TimerState.WORK
+        totalTimerRunning = true
         currentRound = 1
         timeLeft = workTime
-        speak("Start the workout. $totalRounds rounds.")
+        totalTimeLeft = totalMinutes * 60
+        speak("Start the workout. $totalRounds rounds. Total time $totalMinutes minutes.")
         vibrateHeavy()
         lastSpokenSecond = -1
         
@@ -255,8 +336,10 @@ fun TimerScreen(
             }
         }
         timerState = TimerState.IDLE
+        totalTimerRunning = false
         currentRound = 1
         timeLeft = workTime
+        totalTimeLeft = totalMinutes * 60
         speak("Workout stopped")
         vibrate(longArrayOf(0, 100, 50, 100))
         lastSpokenSecond = -1
@@ -276,7 +359,14 @@ fun TimerScreen(
             }
             TimerState.REST -> {
                 if (currentRound >= totalRounds) {
-                    stopWorkout()
+                    scope.launch {
+                        preferencesManager.recordWorkout(currentRound, workTime, restTime)
+                    }
+                    timerState = TimerState.IDLE
+                    currentRound = 1
+                    timeLeft = workTime
+                    speak("Workout complete. Total timer continues.")
+                    lastSpokenSecond = -1
                 } else {
                     currentRound++
                     timerState = TimerState.WORK
@@ -296,6 +386,10 @@ fun TimerScreen(
         val secs = seconds % 60
         return "%d:%02d".format(mins, secs)
     }
+
+    val totalWorkoutSeconds = (totalMinutes * 60).coerceAtLeast(1)
+    val workoutProgress = (((totalWorkoutSeconds - totalTimeLeft).toFloat() / totalWorkoutSeconds) * 100)
+        .coerceIn(0f, 100f)
     
     // Get circle color based on state
     val circleColor = when (timerState) {
@@ -384,14 +478,45 @@ fun TimerScreen(
                         Spacer(modifier = Modifier.width(40.dp))
                     }
                     
-                    // Center - Timer
-                    Text(
-                        text = formatTime(timeLeft),
-                        color = TextWhite,
-                        fontSize = 40.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center
-                    )
+                    // Center - phase timer with total workout progress ring
+                    Box(
+                        modifier = Modifier.size(132.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val strokeWidth = 7.dp.toPx()
+                            val diameter = size.minDimension - strokeWidth
+                            val topLeft = Offset(
+                                (size.width - diameter) / 2,
+                                (size.height - diameter) / 2
+                            )
+                            drawArc(
+                                color = CardBackground,
+                                startAngle = -90f,
+                                sweepAngle = 360f,
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = androidx.compose.ui.geometry.Size(diameter, diameter),
+                                style = Stroke(strokeWidth, cap = StrokeCap.Round)
+                            )
+                            drawArc(
+                                color = circleColor,
+                                startAngle = -90f,
+                                sweepAngle = 360f * (workoutProgress / 100f),
+                                useCenter = false,
+                                topLeft = topLeft,
+                                size = androidx.compose.ui.geometry.Size(diameter, diameter),
+                                style = Stroke(strokeWidth, cap = StrokeCap.Round)
+                            )
+                        }
+                        Text(
+                            text = formatTime(timeLeft),
+                            color = TextWhite,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                     
                     // Right side - Average HR
                     if (timerState != TimerState.IDLE && hrPermissionGranted) {
@@ -417,6 +542,13 @@ fun TimerScreen(
                 }
                 
                 Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "TOTAL ${formatTime(totalTimeLeft)}  ${workoutProgress.toInt()}%",
+                    color = YellowPause,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold
+                )
                 
                 // Control buttons
                 if (timerState == TimerState.IDLE) {
@@ -517,21 +649,21 @@ fun TimerScreen(
                                 color = TextWhite
                             )
                         }
-                    }
-                    
-                    Spacer(modifier = Modifier.height(4.dp))
-                    
-                    // Skip button
-                    if (timerState != TimerState.PAUSED) {
-                        CompactButton(
-                            onClick = { skipPhase() },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess)
-                        ) {
-                            Text(
-                                text = if (timerState == TimerState.WORK) "Skip" else "Next",
-                                fontSize = 9.sp,
-                                color = DarkBackground
-                            )
+
+                        if (timerState != TimerState.PAUSED) {
+                            Button(
+                                onClick = { skipPhase() },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess),
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .width(58.dp)
+                            ) {
+                                Text(
+                                    text = if (timerState == TimerState.WORK) "Skip" else "Next",
+                                    fontSize = 9.sp,
+                                    color = DarkBackground
+                                )
+                            }
                         }
                     }
                 }

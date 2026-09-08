@@ -78,6 +78,12 @@ agenthub/agents/youtube/db
 
 # Mobile development
 android-sdk/ -e 
+
+# Wear OS / Android generated files
+wearos/.gradle/
+wearos/**/build/
+wearos/local.properties
+
 # Environment files
 *.env
 *.env.*

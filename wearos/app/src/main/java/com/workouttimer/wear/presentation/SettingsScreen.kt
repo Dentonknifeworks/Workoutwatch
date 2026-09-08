@@ -28,17 +28,20 @@ fun SettingsScreen(
     val currentWorkTime by preferencesManager.workTime.collectAsState(initial = 40)
     val currentRestTime by preferencesManager.restTime.collectAsState(initial = 60)
     val currentRounds by preferencesManager.rounds.collectAsState(initial = 5)
+    val currentTotalMinutes by preferencesManager.totalMinutes.collectAsState(initial = 90)
     
     // Editable values
     var workTime by remember { mutableIntStateOf(currentWorkTime) }
     var restTime by remember { mutableIntStateOf(currentRestTime) }
     var rounds by remember { mutableIntStateOf(currentRounds) }
+    var totalMinutes by remember { mutableIntStateOf(currentTotalMinutes) }
     
     // Update when loaded
-    LaunchedEffect(currentWorkTime, currentRestTime, currentRounds) {
+    LaunchedEffect(currentWorkTime, currentRestTime, currentRounds, currentTotalMinutes) {
         workTime = currentWorkTime
         restTime = currentRestTime
         rounds = currentRounds
+        totalMinutes = currentTotalMinutes
     }
     
     Scaffold(
@@ -97,6 +100,17 @@ fun SettingsScreen(
                     onIncrease = { if (rounds < 30) rounds++ }
                 )
             }
+
+            // Total workout time
+            item {
+                SettingItem(
+                    label = "Total Time",
+                    value = totalMinutes,
+                    unit = "min",
+                    onDecrease = { if (totalMinutes > 1) totalMinutes-- },
+                    onIncrease = { if (totalMinutes < 240) totalMinutes++ }
+                )
+            }
             
             // Save button
             item {
@@ -104,7 +118,7 @@ fun SettingsScreen(
                 Button(
                     onClick = {
                         scope.launch {
-                            preferencesManager.saveSettings(workTime, restTime, rounds)
+                            preferencesManager.saveSettings(workTime, restTime, rounds, totalMinutes)
                             onBack()
                         }
                     },
