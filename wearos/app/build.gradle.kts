@@ -97,6 +97,7 @@ dependencies {
     
     // Wearable Data Layer API (for phone communication)
     implementation("com.google.android.gms:play-services-wearable:18.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
     
     // Health Services for Heart Rate
     implementation("androidx.health:health-services-client:1.0.0-rc01")
