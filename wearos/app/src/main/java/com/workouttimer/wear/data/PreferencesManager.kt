@@ -18,6 +18,7 @@ class PreferencesManager(private val context: Context) {
         val TOTAL_WORKOUTS = intPreferencesKey("total_workouts")
         val TOTAL_ROUNDS = intPreferencesKey("total_rounds")
         val TOTAL_MINUTES = intPreferencesKey("total_minutes")
+        val TOTAL_MINUTES_DEFAULTED = booleanPreferencesKey("total_minutes_defaulted")
     }
     
     val workTime: Flow<Int> = context.dataStore.data.map { prefs ->
@@ -42,6 +43,15 @@ class PreferencesManager(private val context: Context) {
     
     val totalMinutes: Flow<Int> = context.dataStore.data.map { prefs ->
         prefs[TOTAL_MINUTES] ?: 90
+    }
+
+    suspend fun ensureDefaultTotalMinutes() {
+        context.dataStore.edit { prefs ->
+            if (prefs[TOTAL_MINUTES_DEFAULTED] != true) {
+                prefs[TOTAL_MINUTES] = 90
+                prefs[TOTAL_MINUTES_DEFAULTED] = true
+            }
+        }
     }
     
     suspend fun saveSettings(workTime: Int, restTime: Int, rounds: Int, totalMinutes: Int = 90) {

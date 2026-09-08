@@ -52,7 +52,7 @@ fun TimerScreen(
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
     }
     val audioFocusRequest = remember {
-        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
@@ -60,7 +60,7 @@ fun TimerScreen(
                     .build()
             )
                     .setOnAudioFocusChangeListener { }
-            .setWillPauseWhenDucked(true)
+            .setWillPauseWhenDucked(false)
             .build()
     }
     
@@ -77,6 +77,7 @@ fun TimerScreen(
     var timeLeft by remember { mutableIntStateOf(workTime) }
     var totalTimeLeft by remember { mutableIntStateOf(totalMinutes * 60) }
     var totalTimerRunning by remember { mutableStateOf(false) }
+    var workoutSession by remember { mutableIntStateOf(0) }
     var lastSpokenSecond by remember { mutableIntStateOf(-1) }
     
     // Heart Rate
@@ -105,6 +106,7 @@ fun TimerScreen(
     
     // Initialize TTS
     LaunchedEffect(Unit) {
+        preferencesManager.ensureDefaultTotalMinutes()
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val result = tts?.setLanguage(Locale.US)
@@ -175,7 +177,7 @@ fun TimerScreen(
     }
 
     // Total workout time runs independently of each work/rest phase.
-    LaunchedEffect(totalTimerRunning) {
+    LaunchedEffect(workoutSession, totalTimerRunning) {
         if (totalTimerRunning) {
             onKeepAwake(true)
             var remainingTotalTime = totalTimeLeft
@@ -295,11 +297,12 @@ fun TimerScreen(
     // Start workout
     fun startWorkout() {
         heartRateManager.resetAverage()
+        workoutSession++
+        totalTimeLeft = totalMinutes * 60
         timerState = TimerState.WORK
         totalTimerRunning = true
         currentRound = 1
         timeLeft = workTime
-        totalTimeLeft = totalMinutes * 60
         speak("Start the workout. $totalRounds rounds. Total time $totalMinutes minutes.")
         vibrateHeavy()
         lastSpokenSecond = -1
@@ -337,6 +340,7 @@ fun TimerScreen(
         }
         timerState = TimerState.IDLE
         totalTimerRunning = false
+        workoutSession++
         currentRound = 1
         timeLeft = workTime
         totalTimeLeft = totalMinutes * 60
@@ -424,32 +428,9 @@ fun TimerScreen(
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier.padding(8.dp)
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
             ) {
-                // Status badge + Round counter on same line
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = statusText,
-                        color = circleColor,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = " • ",
-                        color = TextGray,
-                        fontSize = 10.sp
-                    )
-                    Text(
-                        text = "$currentRound/$totalRounds",
-                        color = TextGray,
-                        fontSize = 10.sp
-                    )
-                }
-                
                 // Time display (large) with HR on sides
                 Row(
                     horizontalArrangement = Arrangement.Center,
@@ -480,7 +461,7 @@ fun TimerScreen(
                     
                     // Center - phase timer with total workout progress ring
                     Box(
-                        modifier = Modifier.size(132.dp),
+                        modifier = Modifier.size(112.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -540,13 +521,37 @@ fun TimerScreen(
                         Spacer(modifier = Modifier.width(40.dp))
                     }
                 }
+
+                // Keep the status and round counter centered directly below the timer.
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = statusText,
+                        color = circleColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = " • ",
+                        color = TextGray,
+                        fontSize = 10.sp
+                    )
+                    Text(
+                        text = "$currentRound/$totalRounds",
+                        color = TextGray,
+                        fontSize = 10.sp
+                    )
+                }
                 
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
                     text = "TOTAL ${formatTime(totalTimeLeft)}  ${workoutProgress.toInt()}%",
                     color = YellowPause,
-                    fontSize = 10.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
                 
@@ -556,7 +561,7 @@ fun TimerScreen(
                     Button(
                         onClick = { startWorkout() },
                         colors = ButtonDefaults.buttonColors(backgroundColor = CyanPrimary),
-                        modifier = Modifier.size(56.dp)
+                        modifier = Modifier.size(48.dp)
                     ) {
                         Text(
                             text = "▶",
@@ -576,7 +581,7 @@ fun TimerScreen(
                             onClick = onNavigateToSettings,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(32.dp)
+                                .height(28.dp)
                                 .width(50.dp)
                         ) {
                             Text(
@@ -592,7 +597,7 @@ fun TimerScreen(
                             onClick = onNavigateToPresets,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(32.dp)
+                                .height(28.dp)
                                 .width(50.dp)
                         ) {
                             Text(
@@ -608,7 +613,7 @@ fun TimerScreen(
                             onClick = onNavigateToPhoneControl,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(32.dp)
+                                .height(28.dp)
                                 .width(50.dp)
                         ) {
                             Text(
@@ -620,49 +625,68 @@ fun TimerScreen(
                 } else {
                     // Active workout controls
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Pause/Resume button
-                        Button(
-                            onClick = { togglePause() },
-                            colors = ButtonDefaults.buttonColors(
-                                backgroundColor = if (timerState == TimerState.PAUSED) GreenSuccess else YellowPause
-                            ),
-                            modifier = Modifier.size(44.dp)
+                        // Pause/Resume is centered on the left.
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = if (timerState == TimerState.PAUSED) "▶" else "⏸",
-                                fontSize = 16.sp,
-                                color = DarkBackground
-                            )
-                        }
-                        
-                        // Stop button
-                        Button(
-                            onClick = { stopWorkout() },
-                            colors = ButtonDefaults.buttonColors(backgroundColor = RedStop),
-                            modifier = Modifier.size(44.dp)
-                        ) {
-                            Text(
-                                text = "⏹",
-                                fontSize = 16.sp,
-                                color = TextWhite
-                            )
-                        }
-
-                        if (timerState != TimerState.PAUSED) {
                             Button(
-                                onClick = { skipPhase() },
-                                colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess),
-                                modifier = Modifier
-                                    .height(44.dp)
-                                    .width(58.dp)
+                                onClick = { togglePause() },
+                                colors = ButtonDefaults.buttonColors(
+                                    backgroundColor = if (timerState == TimerState.PAUSED) GreenSuccess else YellowPause
+                                ),
+                                modifier = Modifier.size(40.dp)
                             ) {
                                 Text(
-                                    text = if (timerState == TimerState.WORK) "Skip" else "Next",
-                                    fontSize = 9.sp,
+                                    text = if (timerState == TimerState.PAUSED) "▶" else "⏸",
+                                    fontSize = 16.sp,
                                     color = DarkBackground
                                 )
+                            }
+                        }
+
+                        // Stop is centered between Pause and Skip.
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Button(
+                                onClick = { stopWorkout() },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = RedStop),
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Text(
+                                    text = "⏹",
+                                    fontSize = 11.sp,
+                                    color = TextWhite
+                                )
+                            }
+                        }
+
+                        // Skip/Next is centered on the right.
+                        Box(
+                            modifier = Modifier.weight(1f),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (timerState != TimerState.PAUSED) {
+                                Button(
+                                    onClick = { skipPhase() },
+                                    colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess),
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .width(54.dp)
+                                ) {
+                                    Text(
+                                        text = if (timerState == TimerState.WORK) "Skip" else "Next",
+                                        fontSize = 9.sp,
+                                        color = DarkBackground
+                                    )
+                                }
                             }
                         }
                     }
