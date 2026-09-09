@@ -2,9 +2,7 @@ package com.workouttimer.wear.presentation
 
 import android.Manifest
 import android.content.Context
-import android.media.AudioAttributes
-import android.media.AudioFocusRequest
-import android.media.AudioManager
+import android.os.SystemClock
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -47,21 +45,6 @@ fun TimerScreen(
     val context = LocalContext.current
     val view = LocalView.current
     val scope = rememberCoroutineScope()
-    val audioManager = remember {
-        context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
-    }
-    val audioFocusRequest = remember {
-        AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK)
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ASSISTANCE_ACCESSIBILITY)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .build()
-            )
-                    .setOnAudioFocusChangeListener { }
-            .setWillPauseWhenDucked(false)
-            .build()
-    }
     
     // Settings from DataStore
     val workTime by preferencesManager.workTime.collectAsState(initial = 35)
@@ -73,9 +56,6 @@ fun TimerScreen(
     var previousState by remember { mutableStateOf(TimerState.WORK) }
     var currentRound by remember { mutableIntStateOf(1) }
     var timeLeft by remember { mutableIntStateOf(workTime) }
-    var totalTimeLeft by remember { mutableIntStateOf(0) }
-    var totalTimerRunning by remember { mutableStateOf(false) }
-    var workoutSession by remember { mutableIntStateOf(0) }
     var lastVibrationSecond by remember { mutableIntStateOf(-1) }
     
     // Heart Rate
@@ -101,7 +81,6 @@ fun TimerScreen(
     // Check phone connection
     LaunchedEffect(Unit) {
         preferencesManager.migrateRequestedDefaults()
-        preferencesManager.ensureDefaultTotalMinutes()
         phoneConnected = phoneCommunicator.isPhoneConnected()
     }
 
@@ -110,7 +89,6 @@ fun TimerScreen(
         view.keepScreenOn = true
         onDispose {
             view.keepScreenOn = false
-            audioManager.abandonAudioFocusRequest(audioFocusRequest)
             heartRateManager.stopMonitoring()
         }
     }
@@ -147,10 +125,13 @@ fun TimerScreen(
                 heartRateManager.startMonitoring()
             }
             
+            var phaseEndsAt = SystemClock.elapsedRealtime() + timeLeft * 1000L
             while (timeLeft > 0 && (timerState == TimerState.WORK || timerState == TimerState.REST)) {
-                delay(1000)
+                delay(250)
                 if (timerState == TimerState.WORK || timerState == TimerState.REST) {
-                    timeLeft--
+                    timeLeft = (((phaseEndsAt - SystemClock.elapsedRealtime()) + 999) / 1000)
+                        .coerceAtLeast(0)
+                        .toInt()
                     
                     // Haptic countdown cues only
                     when (timeLeft) {
@@ -216,10 +197,7 @@ fun TimerScreen(
     // Start workout
     fun startWorkout() {
         heartRateManager.resetAverage()
-        workoutSession++
-        totalTimeLeft = 0
         timerState = TimerState.WORK
-        totalTimerRunning = true
         currentRound = 1
         timeLeft = workTime
         vibrateHeavy()
@@ -255,11 +233,8 @@ fun TimerScreen(
             }
         }
         timerState = TimerState.IDLE
-        totalTimerRunning = false
-        workoutSession++
         currentRound = 1
         timeLeft = workTime
-        totalTimeLeft = 0
         vibrate(longArrayOf(0, 100, 50, 100))
         lastVibrationSecond = -1
         heartRateManager.stopMonitoring()

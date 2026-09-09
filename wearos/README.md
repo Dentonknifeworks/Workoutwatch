@@ -1,11 +1,10 @@
 # Workout Timer - Wear OS App
 
-A standalone Wear OS workout timer app with interval training, voice prompts, and haptic feedback.
+A standalone Wear OS workout timer app with interval training and haptic feedback.
 
 ## Features
 
 - ⏱️ **Interval Timer** - Configurable work/rest cycles
-- 🗣️ **Voice Prompts** - Audio announcements at key intervals (10s, 5s, 3-2-1 countdown)
 - 📳 **Haptic Feedback** - Vibration alerts on your wrist
 - ⚙️ **Customizable Settings** - Adjust work time, rest time, and rounds
 - 📋 **Preset Workouts** - Quick HIIT, Tabata, Strength, Cardio
@@ -14,9 +13,9 @@ A standalone Wear OS workout timer app with interval training, voice prompts, an
 
 ## Default Settings
 
-- Work Time: 40 seconds
+- Work Time: 35 seconds
 - Rest Time: 60 seconds
-- Rounds: 5
+- Rounds: 4
 
 ## How to Build
 
@@ -90,8 +89,8 @@ A standalone Wear OS workout timer app with interval training, voice prompts, an
 
 ### Main Timer Screen
 - **▶ Start** - Begin workout
-- **⚙ Settings** - Adjust work/rest/rounds
-- **📋 Presets** - Load preset workouts
+- **EDIT SETTINGS** - Adjust work/rest/rounds
+- **PRESETS** - Load preset workouts
 
 ### During Workout
 - **⏸ Pause/Resume** - Pause or resume timer
@@ -107,15 +106,9 @@ A standalone Wear OS workout timer app with interval training, voice prompts, an
 - Tap a preset card to apply it
 - Swipe right or tap **← Back** to return
 
-## Voice Announcements
+## Haptic Alerts
 
-The app speaks:
-- "Starting workout. X rounds. Get ready!" at start
-- "10 seconds" when 10 seconds remain
-- "5, 4, 3, 2, 1" countdown
-- "Rest!" when work phase ends
-- "Round X. Go!" when rest ends
-- "Workout complete! Great job!" when finished
+The watch vibrates at the start and end of each phase, plus at 10, 5, 4, 3, 2, and 1 seconds remaining.
 
 ## Troubleshooting
 
@@ -165,5 +158,4 @@ wearos/
 - **Kotlin** - Programming language
 - **Jetpack Compose for Wear OS** - Modern declarative UI
 - **DataStore** - Persistent settings storage
-- **TextToSpeech** - Voice announcements
 - **Vibrator API** - Haptic feedback
