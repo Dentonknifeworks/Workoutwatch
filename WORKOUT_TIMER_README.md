@@ -77,9 +77,6 @@ frontend/
 
 ## 🔐 Permissions
 
-### iOS
-- `UIBackgroundModes: ["audio"]` - Background audio, if enabled by the phone build
-
 ### Android
 - `VIBRATE` - Haptic feedback
 - `WAKE_LOCK` - Keep screen awake
@@ -185,7 +182,7 @@ App uses AsyncStorage to persist:
 ## 🎨 Design Principles
 
 ### Mobile-First
-- Minimum 44x44pt touch targets (iOS HIG)
+- Minimum 44x44dp touch targets
 - 8pt grid spacing system
 - High contrast ratios (WCAG AA compliant)
 
@@ -208,7 +205,6 @@ Potential additions:
 - [ ] Workout sharing and export
 - [ ] Weekly/monthly statistics
 - [ ] Achievement badges
-- [ ] Apple Watch support
 - [ ] Multi-language support
 - [ ] Custom sound uploads
 

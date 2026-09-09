@@ -9,17 +9,6 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "android": {
-      "package": "com.workoutimer.app",
-      "versionCode": 1,
-    "ios": {
-      "supportsTablet": true,
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "We need microphone access for voice prompts",
-        "NSSpeechRecognitionUsageDescription": "Enable voice control for timer",
-        "UIBackgroundModes": ["audio"]
-      }
-    },
-    "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#000"

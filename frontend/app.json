@@ -13,17 +13,6 @@
       "resizeMode": "contain",
       "backgroundColor": "#000000"
     },
-    "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.workouttimer.app",
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "We need microphone access for voice prompts",
-        "NSSpeechRecognitionUsageDescription": "Enable voice control for timer",
-        "UIBackgroundModes": [
-          "audio"
-        ]
-      }
-    },
     "android": {
       "package": "com.workouttimer.app",
       "versionCode": 6,
