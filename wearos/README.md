@@ -8,7 +8,7 @@ A standalone Wear OS workout timer app with interval training and haptic feedbac
 - 📳 **Haptic Feedback** - Vibration alerts on your wrist
 - ⚙️ **Customizable Settings** - Adjust work time, rest time, and rounds
 - 📋 **Preset Workouts** - Quick HIIT, Tabata, Strength, Cardio
-- 🌙 **Screen Always On** - Keeps display active during workouts
+- 🌙 **Screen Wake Support** - Requests an active display during workouts; Wear OS may still enter ambient mode depending on device settings
 - 💾 **Persistent Settings** - Saves your preferences locally
 
 ## Default Settings
@@ -111,10 +111,6 @@ A standalone Wear OS workout timer app with interval training and haptic feedbac
 The watch vibrates at the start and end of each phase, plus at 10, 5, 4, 3, 2, and 1 seconds remaining.
 
 ## Troubleshooting
-
-### No sound on emulator
-- Emulators may have limited TTS support
-- Test on physical device for full audio experience
 
 ### Vibration not working
 - Enable haptic feedback in watch settings

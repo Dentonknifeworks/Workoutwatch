@@ -1,4 +1,15 @@
-# Welcome to your Expo app 👋
+# Workoutwatch Phone App
+
+This directory contains the Expo React Native phone app for Workoutwatch.
+
+## Features
+
+- Interval work and rest timer with editable rounds.
+- User-created and built-in workout presets.
+- Local workout history and statistics.
+- Haptic feedback and a dark, high-contrast interface.
+
+## Start Developing
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 

@@ -1,6 +1,6 @@
-# 🏋️ Workout Timer with Voice Prompts & Android Watch Support
+# Workout Timer with Android Watch Support
 
-A professional interval workout timer app built with Expo React Native, featuring voice announcements, haptic feedback, notifications, and Android watch integration support.
+A professional interval workout timer app built with Expo React Native, featuring visual timer states, haptic feedback, local settings, presets, history, and Android watch support.
 
 ## ✨ Features
 
@@ -10,20 +10,13 @@ A professional interval workout timer app built with Expo React Native, featurin
 - 📱 **Visual Feedback** - Color-coded states (Work/Rest/Paused) with animated circle
 - 🔄 **Smart Reset** - Automatic round progression and completion detection
 
-### Voice & Audio Features
-- 🗣️ **Voice Announcements** - Text-to-speech prompts at key intervals:
-  - "10 seconds remaining"
-  - "5, 4, 3, 2, 1" countdown
-  - "Work!" / "Rest!" phase transitions
-  - "Round X" announcements
-  - "Workout complete!"
-- 🔊 **Sound Alerts** - Beep sounds at countdown intervals
+### Feedback
 - 📳 **Haptic Feedback** - Vibration on button taps and timer events
+- 🎨 **Visual Feedback** - Clear work, rest, paused, and round indicators
 
 ### Android Watch Integration
 - ⌚ **Push Notifications** - Workout state changes sent to watch
 - 🔔 **Background Alerts** - Notifications work when app is minimized
-- 🎙️ **Voice Control Ready** - Audio permissions configured for voice commands
 - 🔓 **Wake Lock** - Keeps device awake during workouts
 
 ### Workout Management
@@ -57,8 +50,6 @@ A professional interval workout timer app built with Expo React Native, featurin
 - **Icons**: @expo/vector-icons (Ionicons)
 
 ### Libraries
-- `expo-speech` - Text-to-speech voice announcements
-- `expo-audio` - Sound effects and beeps
 - `expo-haptics` - Vibration feedback
 - `expo-notifications` - Push notifications for watch
 - `expo-keep-awake` - Prevent screen sleep during workouts
@@ -87,9 +78,7 @@ frontend/
 ## 🔐 Permissions
 
 ### iOS
-- `NSMicrophoneUsageDescription` - Voice prompts
-- `NSSpeechRecognitionUsageDescription` - Voice control
-- `UIBackgroundModes: ["audio"]` - Background audio
+- `UIBackgroundModes: ["audio"]` - Background audio, if enabled by the phone build
 
 ### Android
 - `VIBRATE` - Haptic feedback
@@ -124,9 +113,9 @@ eas build --platform android
 
 ### Starting a Workout
 1. Open the **Timer** tab
-2. Click **Settings** (⚙️) to customize work time, rest time, and rounds
+2. Open the settings controls to customize work time, rest time, and rounds
 3. Tap the large **Start** button
-4. Follow voice prompts and on-screen timer
+4. Follow the on-screen timer and haptic feedback
 
 ### Using Presets
 1. Go to **Presets** tab
@@ -144,7 +133,6 @@ eas build --platform android
 
 When running on Android devices:
 - Notifications automatically appear on paired watches
-- Voice announcements play through watch speaker
 - Watch will vibrate at key intervals
 - Background notifications work even when phone is locked
 
@@ -156,7 +144,7 @@ Edit `/app/frontend/app/(tabs)/timer.tsx`:
 const [settings, setSettings] = useState<WorkoutSettings>({
   workTime: 30,    // seconds
   restTime: 10,    // seconds
-  rounds: 5,       // number of rounds
+  rounds: 4,       // number of rounds
 });
 ```
 
@@ -175,15 +163,6 @@ const defaultPresets: WorkoutPreset[] = [
 ];
 ```
 
-### Adjust Voice Prompts
-Edit `/app/frontend/app/(tabs)/timer.tsx`:
-```typescript
-// Change when voice announcements trigger
-if (newTime === 10 && lastSpokenSecond.current !== 10) {
-  speak('10 seconds');
-}
-```
-
 ## 📊 Local Data Storage
 
 App uses AsyncStorage to persist:
@@ -192,11 +171,6 @@ App uses AsyncStorage to persist:
 - **workoutHistory** - Last 50 workout sessions
 
 ## 🐛 Troubleshooting
-
-### Voice Not Working
-- Ensure device volume is up
-- Check system text-to-speech is enabled
-- Grant microphone permissions in settings
 
 ### Notifications Not Appearing on Watch
 - Verify watch is paired with phone
@@ -247,7 +221,7 @@ This project is part of the Emergent AI platform.
 For issues or questions:
 - Check console logs in development
 - Review notification permissions
-- Verify audio/haptics are enabled
+- Verify haptics are enabled
 - Test on physical device for full functionality
 
 ---

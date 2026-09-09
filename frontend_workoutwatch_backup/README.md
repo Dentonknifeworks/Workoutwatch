@@ -1,4 +1,8 @@
-# Welcome to your Expo app 👋
+# Workoutwatch Phone App Backup
+
+This directory is a backup copy of the Expo React Native phone app. It contains the same timer, preset, and history structure as the main `frontend/` project.
+
+## Start Developing
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
