@@ -10,7 +10,6 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -59,7 +58,7 @@ export default function TimerScreen() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPresets, setShowPresets] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastSpokenSecond = useRef<number>(-1);
+  const lastVibrationSecond = useRef<number>(-1);
 
   useEffect(() => {
     loadSettings();
@@ -95,14 +94,6 @@ export default function TimerScreen() {
     }
   };
 
-  const speak = (text: string) => {
-    Speech.speak(text, {
-      language: 'en-US',
-      pitch: 1.0,
-      rate: 0.9,
-    });
-  };
-
   const startWorkout = async () => {
     try {
       await activateKeepAwakeAsync();
@@ -114,19 +105,16 @@ export default function TimerScreen() {
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
     setTotalTimeLeft(totalSeconds);
-    speak(`Start the workout. ${settings.rounds} rounds. Total time ${settings.totalMinutes || DEFAULT_TOTAL_MINUTES} minutes.`);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    lastSpokenSecond.current = -1;
+    lastVibrationSecond.current = -1;
   };
 
   const pauseWorkout = () => {
     if (timerState === 'paused') {
       setTimerState(previousState);
-      speak('Resuming');
     } else {
       setPreviousState(timerState as 'work' | 'rest');
       setTimerState('paused');
-      speak('Paused');
     }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
@@ -139,23 +127,21 @@ export default function TimerScreen() {
     setCurrentRound(1);
     setTimeLeft(settings.workTime);
     setTotalTimeLeft((settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60);
-    speak('Workout stopped');
     try {
       await deactivateKeepAwake();
     } catch (error) {
       console.log('Keep awake deactivate not needed on this platform');
     }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    lastSpokenSecond.current = -1;
+    lastVibrationSecond.current = -1;
   };
 
   const skipToRest = () => {
     if (timerState === 'work') {
       setTimerState('rest');
       setTimeLeft(settings.restTime);
-      speak('Rest time!');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      lastSpokenSecond.current = -1;
+      lastVibrationSecond.current = -1;
     } else if (timerState === 'rest') {
       if (currentRound >= settings.rounds) {
         stopWorkout();
@@ -163,9 +149,8 @@ export default function TimerScreen() {
         setCurrentRound(currentRound + 1);
         setTimerState('work');
         setTimeLeft(settings.workTime);
-        speak(`Round ${currentRound + 1}. Go!`);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        lastSpokenSecond.current = -1;
+        lastVibrationSecond.current = -1;
       }
     }
   };
@@ -195,10 +180,9 @@ export default function TimerScreen() {
     setTimerState('idle');
     setTimeLeft(settings.workTime);
     setTotalTimeLeft((settings.totalMinutes || DEFAULT_TOTAL_MINUTES) * 60);
-    speak('Workout complete. Total time reached!');
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     saveWorkoutHistory();
-    lastSpokenSecond.current = -1;
+    lastVibrationSecond.current = -1;
   };
 
   useEffect(() => {
@@ -207,17 +191,14 @@ export default function TimerScreen() {
         setTimeLeft((prev) => {
           const newTime = prev - 1;
 
-          if (newTime === 10 && lastSpokenSecond.current !== 10) {
-            speak('10 seconds');
-            lastSpokenSecond.current = 10;
+          if (newTime === 10 && lastVibrationSecond.current !== 10) {
+            lastVibrationSecond.current = 10;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          } else if (newTime === 5 && lastSpokenSecond.current !== 5) {
-            speak('5');
-            lastSpokenSecond.current = 5;
+          } else if (newTime === 5 && lastVibrationSecond.current !== 5) {
+            lastVibrationSecond.current = 5;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          } else if (newTime <= 3 && newTime > 0 && lastSpokenSecond.current !== newTime) {
-            speak(newTime.toString());
-            lastSpokenSecond.current = newTime;
+          } else if (newTime <= 4 && newTime > 0 && lastVibrationSecond.current !== newTime) {
+            lastVibrationSecond.current = newTime;
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           }
 
@@ -251,25 +232,22 @@ export default function TimerScreen() {
     if (timerState === 'work') {
       setTimerState('rest');
       setTimeLeft(settings.restTime);
-      speak('Rest!');
-      lastSpokenSecond.current = -1;
+      lastVibrationSecond.current = -1;
     } else if (timerState === 'rest') {
       if (currentRound >= settings.rounds) {
         setTimerState('idle');
-        speak('Workout complete! Great job!');
         try {
           deactivateKeepAwake();
         } catch (error) {
           console.log('Keep awake deactivate not needed on this platform');
         }
         saveWorkoutHistory();
-        lastSpokenSecond.current = -1;
+        lastVibrationSecond.current = -1;
       } else {
         setCurrentRound(currentRound + 1);
         setTimerState('work');
         setTimeLeft(settings.workTime);
-        speak(`Round ${currentRound + 1}. Go!`);
-        lastSpokenSecond.current = -1;
+        lastVibrationSecond.current = -1;
       }
     }
   };
@@ -422,9 +400,6 @@ export default function TimerScreen() {
           <Text style={styles.infoLabel}>Total Time</Text>
           <Text style={styles.infoValue}>{settings.totalMinutes || DEFAULT_TOTAL_MINUTES} min</Text>
         </View>
-        <Text style={styles.totalTimeText}>
-          Remaining total: {formatTime(totalTimeLeft)}
-        </Text>
       </View>
 
       <Modal
@@ -746,13 +721,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-  },
-  totalTimeText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFD60A',
-    marginTop: 4,
-    textAlign: 'center',
   },
   modalOverlay: {
     flex: 1,

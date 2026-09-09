@@ -7,8 +7,6 @@ import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.VibrationEffect
 import android.os.Vibrator
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -18,6 +16,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -47,6 +46,7 @@ fun TimerScreen(
     onKeepAwake: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
+    val view = LocalView.current
     val scope = rememberCoroutineScope()
     val audioManager = remember {
         context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
@@ -78,7 +78,7 @@ fun TimerScreen(
     var totalTimeLeft by remember { mutableIntStateOf(totalMinutes * 60) }
     var totalTimerRunning by remember { mutableStateOf(false) }
     var workoutSession by remember { mutableIntStateOf(0) }
-    var lastSpokenSecond by remember { mutableIntStateOf(-1) }
+    var lastVibrationSecond by remember { mutableIntStateOf(-1) }
     
     // Heart Rate
     val heartRateManager = remember { HeartRateManager(context) }
@@ -100,30 +100,18 @@ fun TimerScreen(
         }
     }
     
-    // Text-to-Speech
-    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
-    var ttsReady by remember { mutableStateOf(false) }
-    
-    // Initialize TTS
+    // Check phone connection
     LaunchedEffect(Unit) {
         preferencesManager.ensureDefaultTotalMinutes()
-        tts = TextToSpeech(context) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val result = tts?.setLanguage(Locale.US)
-                ttsReady = result != TextToSpeech.LANG_MISSING_DATA && 
-                           result != TextToSpeech.LANG_NOT_SUPPORTED
-            }
-        }
-        // Check phone connection
         phoneConnected = phoneCommunicator.isPhoneConnected()
     }
-    
-    // Cleanup
+
+    // Keep the timer screen awake while it is active.
     DisposableEffect(Unit) {
+        view.keepScreenOn = true
         onDispose {
+            view.keepScreenOn = false
             audioManager.abandonAudioFocusRequest(audioFocusRequest)
-            tts?.stop()
-            tts?.shutdown()
             heartRateManager.stopMonitoring()
         }
     }
@@ -132,25 +120,6 @@ fun TimerScreen(
     LaunchedEffect(Unit) {
         if (!hrPermissionGranted && heartRateManager.hasSensor()) {
             permissionLauncher.launch(Manifest.permission.BODY_SENSORS)
-        }
-    }
-    
-    // Speak function with ready check
-    fun speak(text: String) {
-        if (ttsReady && tts != null) {
-            audioManager.requestAudioFocus(audioFocusRequest)
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) = Unit
-
-                override fun onDone(utteranceId: String?) {
-                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
-                }
-
-                override fun onError(utteranceId: String?) {
-                    audioManager.abandonAudioFocusRequest(audioFocusRequest)
-                }
-            })
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "workout_tts")
         }
     }
     
@@ -191,7 +160,6 @@ fun TimerScreen(
                 totalTimerRunning = false
                 vibrateHeavy()
                 timerState = TimerState.IDLE
-                speak("Workout complete. Total time reached!")
                 onKeepAwake(false)
                 heartRateManager.stopMonitoring()
                 scope.launch {
@@ -203,7 +171,7 @@ fun TimerScreen(
                 }
                 currentRound = 1
                 timeLeft = workTime
-                lastSpokenSecond = -1
+                lastVibrationSecond = -1
             }
         }
     }
@@ -222,27 +190,24 @@ fun TimerScreen(
                 if (timerState == TimerState.WORK || timerState == TimerState.REST) {
                     timeLeft--
                     
-                    // Voice announcements
+                    // Haptic countdown cues only
                     when (timeLeft) {
                         10 -> {
-                            if (lastSpokenSecond != 10) {
-                                speak("10 seconds")
+                            if (lastVibrationSecond != 10) {
                                 vibrate()
-                                lastSpokenSecond = 10
+                                lastVibrationSecond = 10
                             }
                         }
                         5 -> {
-                            if (lastSpokenSecond != 5) {
-                                speak("5")
+                            if (lastVibrationSecond != 5) {
                                 vibrate()
-                                lastSpokenSecond = 5
+                                lastVibrationSecond = 5
                             }
                         }
-                        3, 2, 1 -> {
-                            if (lastSpokenSecond != timeLeft) {
-                                speak(timeLeft.toString())
+                        4, 3, 2, 1 -> {
+                            if (lastVibrationSecond != timeLeft) {
                                 vibrate()
-                                lastSpokenSecond = timeLeft
+                                lastVibrationSecond = timeLeft
                             }
                         }
                     }
@@ -255,15 +220,12 @@ fun TimerScreen(
                             TimerState.WORK -> {
                                 timerState = TimerState.REST
                                 timeLeft = restTime
-                                speak("Rest!")
-                                lastSpokenSecond = -1
+                                lastVibrationSecond = -1
                             }
                             TimerState.REST -> {
                                 if (currentRound >= totalRounds) {
                                     // Workout complete
                                     timerState = TimerState.IDLE
-                                    val avgHR = if (averageHR > 0) " Average heart rate: $averageHR" else ""
-                                    speak("Workout complete! Great job!$avgHR")
                                     onKeepAwake(false)
                                     heartRateManager.stopMonitoring()
                                     // Save workout history
@@ -272,13 +234,12 @@ fun TimerScreen(
                                     }
                                     currentRound = 1
                                     timeLeft = workTime
-                                    lastSpokenSecond = -1
+                                    lastVibrationSecond = -1
                                 } else {
                                     currentRound++
                                     timerState = TimerState.WORK
                                     timeLeft = workTime
-                                    speak("Round $currentRound. Go!")
-                                    lastSpokenSecond = -1
+                                    lastVibrationSecond = -1
                                 }
                             }
                             else -> {}
@@ -303,9 +264,8 @@ fun TimerScreen(
         totalTimerRunning = true
         currentRound = 1
         timeLeft = workTime
-        speak("Start the workout. $totalRounds rounds. Total time $totalMinutes minutes.")
         vibrateHeavy()
-        lastSpokenSecond = -1
+        lastVibrationSecond = -1
         
         // Check phone connection
         scope.launch {
@@ -317,14 +277,12 @@ fun TimerScreen(
     fun togglePause() {
         if (timerState == TimerState.PAUSED) {
             timerState = previousState
-            speak("Resuming")
             if (hrPermissionGranted) {
                 heartRateManager.startMonitoring()
             }
         } else {
             previousState = timerState
             timerState = TimerState.PAUSED
-            speak("Paused")
             heartRateManager.stopMonitoring()
         }
         vibrate()
@@ -344,9 +302,8 @@ fun TimerScreen(
         currentRound = 1
         timeLeft = workTime
         totalTimeLeft = totalMinutes * 60
-        speak("Workout stopped")
         vibrate(longArrayOf(0, 100, 50, 100))
-        lastSpokenSecond = -1
+        lastVibrationSecond = -1
         onKeepAwake(false)
         heartRateManager.stopMonitoring()
     }
@@ -357,9 +314,8 @@ fun TimerScreen(
             TimerState.WORK -> {
                 timerState = TimerState.REST
                 timeLeft = restTime
-                speak("Rest time!")
                 vibrateHeavy()
-                lastSpokenSecond = -1
+                lastVibrationSecond = -1
             }
             TimerState.REST -> {
                 if (currentRound >= totalRounds) {
@@ -369,15 +325,13 @@ fun TimerScreen(
                     timerState = TimerState.IDLE
                     currentRound = 1
                     timeLeft = workTime
-                    speak("Workout complete. Total timer continues.")
-                    lastSpokenSecond = -1
+                    lastVibrationSecond = -1
                 } else {
                     currentRound++
                     timerState = TimerState.WORK
                     timeLeft = workTime
-                    speak("Round $currentRound. Go!")
                     vibrateHeavy()
-                    lastSpokenSecond = -1
+                    lastVibrationSecond = -1
                 }
             }
             else -> {}
@@ -548,13 +502,6 @@ fun TimerScreen(
                 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Text(
-                    text = "TOTAL ${formatTime(totalTimeLeft)}  ${workoutProgress.toInt()}%",
-                    color = YellowPause,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
                 // Control buttons
                 if (timerState == TimerState.IDLE) {
                     // Start button - large and prominent

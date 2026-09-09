@@ -18,7 +18,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         preferencesManager = PreferencesManager(this)
-        
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
         setContent {
             WorkoutTimerTheme {
                 WearApp(preferencesManager = preferencesManager) { keepAwake ->
