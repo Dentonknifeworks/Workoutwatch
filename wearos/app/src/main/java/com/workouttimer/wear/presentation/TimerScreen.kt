@@ -407,23 +407,24 @@ fun TimerScreen(
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
+                    modifier = Modifier.offset(y = (-4).dp)
                 ) {
                     Text(
                         text = statusText,
                         color = circleColor,
-                        fontSize = 11.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
                         text = " • ",
                         color = TextGray,
-                        fontSize = 10.sp
+                        fontSize = 13.sp
                     )
                     Text(
                         text = "$currentRound/$totalRounds",
                         color = TextGray,
-                        fontSize = 10.sp
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
                 
