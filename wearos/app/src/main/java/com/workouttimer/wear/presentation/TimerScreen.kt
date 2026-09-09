@@ -42,8 +42,7 @@ fun TimerScreen(
     preferencesManager: PreferencesManager,
     onNavigateToSettings: () -> Unit,
     onNavigateToPresets: () -> Unit,
-    onNavigateToPhoneControl: () -> Unit,
-    onKeepAwake: (Boolean) -> Unit
+    onNavigateToPhoneControl: () -> Unit
 ) {
     val context = LocalContext.current
     val view = LocalView.current
@@ -65,17 +64,16 @@ fun TimerScreen(
     }
     
     // Settings from DataStore
-    val workTime by preferencesManager.workTime.collectAsState(initial = 40)
+    val workTime by preferencesManager.workTime.collectAsState(initial = 35)
     val restTime by preferencesManager.restTime.collectAsState(initial = 60)
-    val totalRounds by preferencesManager.rounds.collectAsState(initial = 5)
-    val totalMinutes by preferencesManager.totalMinutes.collectAsState(initial = 90)
+    val totalRounds by preferencesManager.rounds.collectAsState(initial = 4)
     
     // Timer state
     var timerState by remember { mutableStateOf(TimerState.IDLE) }
     var previousState by remember { mutableStateOf(TimerState.WORK) }
     var currentRound by remember { mutableIntStateOf(1) }
     var timeLeft by remember { mutableIntStateOf(workTime) }
-    var totalTimeLeft by remember { mutableIntStateOf(totalMinutes * 60) }
+    var totalTimeLeft by remember { mutableIntStateOf(0) }
     var totalTimerRunning by remember { mutableStateOf(false) }
     var workoutSession by remember { mutableIntStateOf(0) }
     var lastVibrationSecond by remember { mutableIntStateOf(-1) }
@@ -102,11 +100,12 @@ fun TimerScreen(
     
     // Check phone connection
     LaunchedEffect(Unit) {
+        preferencesManager.migrateRequestedDefaults()
         preferencesManager.ensureDefaultTotalMinutes()
         phoneConnected = phoneCommunicator.isPhoneConnected()
     }
 
-    // Keep the timer screen awake while it is active.
+    // Keep the timer screen awake while this screen is visible.
     DisposableEffect(Unit) {
         view.keepScreenOn = true
         onDispose {
@@ -139,47 +138,10 @@ fun TimerScreen(
         }
     }
 
-    LaunchedEffect(totalMinutes) {
-        if (timerState == TimerState.IDLE) {
-            totalTimeLeft = totalMinutes * 60
-        }
-    }
-
-    // Total workout time runs independently of each work/rest phase.
-    LaunchedEffect(workoutSession, totalTimerRunning) {
-        if (totalTimerRunning) {
-            onKeepAwake(true)
-            var remainingTotalTime = totalTimeLeft
-            while (remainingTotalTime > 0 && totalTimerRunning) {
-                delay(1000)
-                remainingTotalTime--
-                totalTimeLeft = remainingTotalTime
-            }
-
-            if (remainingTotalTime <= 0 && totalTimerRunning) {
-                totalTimerRunning = false
-                vibrateHeavy()
-                timerState = TimerState.IDLE
-                onKeepAwake(false)
-                heartRateManager.stopMonitoring()
-                scope.launch {
-                    preferencesManager.recordWorkout(
-                        (currentRound - 1).coerceAtLeast(0),
-                        workTime,
-                        restTime
-                    )
-                }
-                currentRound = 1
-                timeLeft = workTime
-                lastVibrationSecond = -1
-            }
-        }
-    }
     
     // Timer logic
     LaunchedEffect(timerState) {
         if (timerState == TimerState.WORK || timerState == TimerState.REST) {
-            onKeepAwake(true)
             // Start heart rate monitoring
             if (hrPermissionGranted) {
                 heartRateManager.startMonitoring()
@@ -226,7 +188,6 @@ fun TimerScreen(
                                 if (currentRound >= totalRounds) {
                                     // Workout complete
                                     timerState = TimerState.IDLE
-                                    onKeepAwake(false)
                                     heartRateManager.stopMonitoring()
                                     // Save workout history
                                     scope.launch {
@@ -248,9 +209,6 @@ fun TimerScreen(
                 }
             }
         } else if (timerState == TimerState.IDLE) {
-            if (!totalTimerRunning) {
-                onKeepAwake(false)
-            }
             heartRateManager.stopMonitoring()
         }
     }
@@ -259,7 +217,7 @@ fun TimerScreen(
     fun startWorkout() {
         heartRateManager.resetAverage()
         workoutSession++
-        totalTimeLeft = totalMinutes * 60
+        totalTimeLeft = 0
         timerState = TimerState.WORK
         totalTimerRunning = true
         currentRound = 1
@@ -301,10 +259,9 @@ fun TimerScreen(
         workoutSession++
         currentRound = 1
         timeLeft = workTime
-        totalTimeLeft = totalMinutes * 60
+        totalTimeLeft = 0
         vibrate(longArrayOf(0, 100, 50, 100))
         lastVibrationSecond = -1
-        onKeepAwake(false)
         heartRateManager.stopMonitoring()
     }
     
@@ -345,10 +302,6 @@ fun TimerScreen(
         return "%d:%02d".format(mins, secs)
     }
 
-    val totalWorkoutSeconds = (totalMinutes * 60).coerceAtLeast(1)
-    val workoutProgress = (((totalWorkoutSeconds - totalTimeLeft).toFloat() / totalWorkoutSeconds) * 100)
-        .coerceIn(0f, 100f)
-    
     // Get circle color based on state
     val circleColor = when (timerState) {
         TimerState.WORK -> CyanPrimary
@@ -413,37 +366,11 @@ fun TimerScreen(
                         Spacer(modifier = Modifier.width(40.dp))
                     }
                     
-                    // Center - phase timer with total workout progress ring
+                    // Center - phase timer only
                     Box(
                         modifier = Modifier.size(112.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Canvas(modifier = Modifier.fillMaxSize()) {
-                            val strokeWidth = 7.dp.toPx()
-                            val diameter = size.minDimension - strokeWidth
-                            val topLeft = Offset(
-                                (size.width - diameter) / 2,
-                                (size.height - diameter) / 2
-                            )
-                            drawArc(
-                                color = CardBackground,
-                                startAngle = -90f,
-                                sweepAngle = 360f,
-                                useCenter = false,
-                                topLeft = topLeft,
-                                size = androidx.compose.ui.geometry.Size(diameter, diameter),
-                                style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                            )
-                            drawArc(
-                                color = circleColor,
-                                startAngle = -90f,
-                                sweepAngle = 360f * (workoutProgress / 100f),
-                                useCenter = false,
-                                topLeft = topLeft,
-                                size = androidx.compose.ui.geometry.Size(diameter, diameter),
-                                style = Stroke(strokeWidth, cap = StrokeCap.Round)
-                            )
-                        }
                         Text(
                             text = formatTime(timeLeft),
                             color = TextWhite,
@@ -504,68 +431,91 @@ fun TimerScreen(
 
                 // Control buttons
                 if (timerState == TimerState.IDLE) {
-                    // Start button - large and prominent
-                    Button(
-                        onClick = { startWorkout() },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = CyanPrimary),
-                        modifier = Modifier.size(48.dp)
-                    ) {
-                        Text(
-                            text = "▶",
-                            fontSize = 24.sp,
-                            color = DarkBackground
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Settings, Presets, and Phone Control buttons
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Settings button
+                        Button(
+                            onClick = { startWorkout() },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = CyanPrimary),
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(64.dp)
+                        ) {
+                            Text(
+                                text = "▶",
+                                fontSize = 20.sp,
+                                color = DarkBackground
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                val activity = context as? android.app.Activity
+                                activity?.finish()
+                            },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = RedStop),
+                            modifier = Modifier
+                                .height(40.dp)
+                                .width(64.dp)
+                        ) {
+                            Text(
+                                text = "EXIT",
+                                fontSize = 11.sp,
+                                color = TextWhite
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
                         Button(
                             onClick = onNavigateToSettings,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(28.dp)
-                                .width(50.dp)
+                                .height(34.dp)
+                                .fillMaxWidth(0.8f)
                         ) {
                             Text(
-                                text = "SET",
-                                fontSize = 9.sp,
+                                text = "EDIT SETTINGS",
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = CyanPrimary
                             )
                         }
-                        
-                        // Presets button
+
                         Button(
                             onClick = onNavigateToPresets,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(28.dp)
-                                .width(50.dp)
+                                .height(34.dp)
+                                .fillMaxWidth(0.8f)
                         ) {
                             Text(
-                                text = "PRE",
+                                text = "PRESETS",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = OrangeRest
                             )
                         }
-                        
-                        // Phone Control button
+
                         Button(
                             onClick = onNavigateToPhoneControl,
                             colors = ButtonDefaults.buttonColors(backgroundColor = CardBackground),
                             modifier = Modifier
-                                .height(28.dp)
-                                .width(50.dp)
+                                .height(34.dp)
+                                .fillMaxWidth(0.8f)
                         ) {
                             Text(
-                                text = "📱",
-                                fontSize = 12.sp
+                                text = "PHONE",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextGray
                             )
                         }
                     }
@@ -574,66 +524,53 @@ fun TimerScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                            .padding(horizontal = 18.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Pause/Resume is centered on the left.
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
+                        Button(
+                            onClick = { togglePause() },
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = if (timerState == TimerState.PAUSED) GreenSuccess else YellowPause
+                            ),
+                            modifier = Modifier
+                                .height(36.dp)
+                                .width(52.dp)
                         ) {
+                            Text(
+                                text = if (timerState == TimerState.PAUSED) "▶" else "⏸",
+                                fontSize = 16.sp,
+                                color = DarkBackground
+                            )
+                        }
+
+                        Button(
+                            onClick = { stopWorkout() },
+                            colors = ButtonDefaults.buttonColors(backgroundColor = RedStop),
+                            modifier = Modifier
+                                .height(36.dp)
+                                .width(52.dp)
+                        ) {
+                            Text(
+                                text = "⏹",
+                                fontSize = 12.sp,
+                                color = TextWhite
+                            )
+                        }
+
+                        if (timerState != TimerState.PAUSED) {
                             Button(
-                                onClick = { togglePause() },
-                                colors = ButtonDefaults.buttonColors(
-                                    backgroundColor = if (timerState == TimerState.PAUSED) GreenSuccess else YellowPause
-                                ),
-                                modifier = Modifier.size(40.dp)
+                                onClick = { skipPhase() },
+                                colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess),
+                                modifier = Modifier
+                                    .height(36.dp)
+                                    .width(52.dp)
                             ) {
                                 Text(
-                                    text = if (timerState == TimerState.PAUSED) "▶" else "⏸",
-                                    fontSize = 16.sp,
+                                    text = if (timerState == TimerState.WORK) "Skip" else "Next",
+                                    fontSize = 9.sp,
                                     color = DarkBackground
                                 )
-                            }
-                        }
-
-                        // Stop is centered between Pause and Skip.
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Button(
-                                onClick = { stopWorkout() },
-                                colors = ButtonDefaults.buttonColors(backgroundColor = RedStop),
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Text(
-                                    text = "⏹",
-                                    fontSize = 11.sp,
-                                    color = TextWhite
-                                )
-                            }
-                        }
-
-                        // Skip/Next is centered on the right.
-                        Box(
-                            modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            if (timerState != TimerState.PAUSED) {
-                                Button(
-                                    onClick = { skipPhase() },
-                                    colors = ButtonDefaults.buttonColors(backgroundColor = GreenSuccess),
-                                    modifier = Modifier
-                                        .height(40.dp)
-                                        .width(54.dp)
-                                ) {
-                                    Text(
-                                        text = if (timerState == TimerState.WORK) "Skip" else "Next",
-                                        fontSize = 9.sp,
-                                        color = DarkBackground
-                                    )
-                                }
                             }
                         }
                     }

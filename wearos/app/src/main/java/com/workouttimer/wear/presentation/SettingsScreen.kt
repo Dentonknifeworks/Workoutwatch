@@ -25,23 +25,20 @@ fun SettingsScreen(
     val listState = rememberScalingLazyListState()
     
     // Current settings
-    val currentWorkTime by preferencesManager.workTime.collectAsState(initial = 40)
+    val currentWorkTime by preferencesManager.workTime.collectAsState(initial = 35)
     val currentRestTime by preferencesManager.restTime.collectAsState(initial = 60)
-    val currentRounds by preferencesManager.rounds.collectAsState(initial = 5)
-    val currentTotalMinutes by preferencesManager.totalMinutes.collectAsState(initial = 90)
+    val currentRounds by preferencesManager.rounds.collectAsState(initial = 4)
     
     // Editable values
     var workTime by remember { mutableIntStateOf(currentWorkTime) }
     var restTime by remember { mutableIntStateOf(currentRestTime) }
     var rounds by remember { mutableIntStateOf(currentRounds) }
-    var totalMinutes by remember { mutableIntStateOf(currentTotalMinutes) }
     
     // Update when loaded
-    LaunchedEffect(currentWorkTime, currentRestTime, currentRounds, currentTotalMinutes) {
+    LaunchedEffect(currentWorkTime, currentRestTime, currentRounds) {
         workTime = currentWorkTime
         restTime = currentRestTime
         rounds = currentRounds
-        totalMinutes = currentTotalMinutes
     }
     
     Scaffold(
@@ -101,24 +98,13 @@ fun SettingsScreen(
                 )
             }
 
-            // Total workout time
-            item {
-                SettingItem(
-                    label = "Total Time",
-                    value = totalMinutes,
-                    unit = "min",
-                    onDecrease = { if (totalMinutes > 1) totalMinutes-- },
-                    onIncrease = { if (totalMinutes < 240) totalMinutes++ }
-                )
-            }
-            
             // Save button
             item {
                 Spacer(modifier = Modifier.height(8.dp))
                 Button(
                     onClick = {
                         scope.launch {
-                            preferencesManager.saveSettings(workTime, restTime, rounds, totalMinutes)
+                            preferencesManager.saveSettings(workTime, restTime, rounds)
                             onBack()
                         }
                     },

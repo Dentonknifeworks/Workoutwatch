@@ -13,31 +13,29 @@ import com.workouttimer.wear.presentation.theme.WorkoutTimerTheme
 
 class MainActivity : ComponentActivity() {
     private lateinit var preferencesManager: PreferencesManager
-    
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         preferencesManager = PreferencesManager(this)
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         setContent {
             WorkoutTimerTheme {
-                WearApp(preferencesManager = preferencesManager) { keepAwake ->
-                    if (keepAwake) {
-                        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    } else {
-                        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                    }
-                }
+                WearApp(preferencesManager = preferencesManager)
             }
         }
+    }
+
+    override fun onDestroy() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        super.onDestroy()
     }
 }
 
 @Composable
 fun WearApp(
-    preferencesManager: PreferencesManager,
-    onKeepAwake: (Boolean) -> Unit
+    preferencesManager: PreferencesManager
 ) {
     val navController = rememberSwipeDismissableNavController()
     
@@ -50,8 +48,7 @@ fun WearApp(
                 preferencesManager = preferencesManager,
                 onNavigateToSettings = { navController.navigate("settings") },
                 onNavigateToPresets = { navController.navigate("presets") },
-                onNavigateToPhoneControl = { navController.navigate("phone_control") },
-                onKeepAwake = onKeepAwake
+                onNavigateToPhoneControl = { navController.navigate("phone_control") }
             )
         }
         composable("settings") {

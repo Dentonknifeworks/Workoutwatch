@@ -22,7 +22,7 @@ class PreferencesManager(private val context: Context) {
     }
     
     val workTime: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[WORK_TIME] ?: 40
+        prefs[WORK_TIME] ?: 35
     }
     
     val restTime: Flow<Int> = context.dataStore.data.map { prefs ->
@@ -30,7 +30,7 @@ class PreferencesManager(private val context: Context) {
     }
     
     val rounds: Flow<Int> = context.dataStore.data.map { prefs ->
-        prefs[ROUNDS] ?: 5
+        prefs[ROUNDS] ?: 4
     }
     
     val totalWorkouts: Flow<Int> = context.dataStore.data.map { prefs ->
@@ -50,6 +50,16 @@ class PreferencesManager(private val context: Context) {
             if (prefs[TOTAL_MINUTES_DEFAULTED] != true) {
                 prefs[TOTAL_MINUTES] = 90
                 prefs[TOTAL_MINUTES_DEFAULTED] = true
+            }
+        }
+    }
+
+    suspend fun migrateRequestedDefaults() {
+        context.dataStore.edit { prefs ->
+            if (prefs[WORK_TIME] == 40 && prefs[REST_TIME] == 60 && prefs[ROUNDS] == 5) {
+                prefs[WORK_TIME] = 35
+                prefs[REST_TIME] = 60
+                prefs[ROUNDS] = 4
             }
         }
     }
